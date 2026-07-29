@@ -1,0 +1,38 @@
+from __future__ import annotations
+
+from functools import lru_cache
+from pathlib import Path
+
+from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+
+
+class Settings(BaseSettings):
+    """Configuration loaded from environment variables and the project `.env` file."""
+
+    model_config = SettingsConfigDict(
+        env_file=PROJECT_ROOT / ".env",
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+        extra="ignore",
+    )
+
+    app_name: str = "SecureRAG"
+    environment: str = "development"
+    openai_api_key: str | None = None
+    openai_model: str = "gpt-4o-mini"
+    chroma_path: Path = Field(default=PROJECT_ROOT / "chroma_db")
+    upload_dir: Path = Field(default=PROJECT_ROOT / "data" / "uploads")
+    chroma_collection: str = "securerag_documents"
+    top_k: int = Field(default=4, ge=1, le=20)
+    chunk_size: int = Field(default=1000, ge=100)
+    chunk_overlap: int = Field(default=200, ge=0)
+
+
+@lru_cache
+def get_settings() -> Settings:
+    return Settings()
+
