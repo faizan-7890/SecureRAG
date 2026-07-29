@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from app.core.config import Settings
@@ -9,6 +10,12 @@ if TYPE_CHECKING:
     from langchain_chroma import Chroma
     from langchain_community.embeddings import HuggingFaceEmbeddings
     from langchain_core.documents import Document
+
+
+@dataclass(frozen=True)
+class RetrievedChunk:
+    document: Document
+    relevance_score: float
 
 
 class RAGService:
@@ -41,17 +48,17 @@ class RAGService:
         if not self.settings.openai_api_key:
             raise RuntimeError("OPENAI_API_KEY is not configured. Add it to your .env file.")
 
-        documents = self._vector_store().similarity_search(question, k=self.settings.top_k)
-        if not documents:
+        chunks = self._retrieve(question)
+        if not chunks:
             return ChatResponse(
-                answer="I could not find relevant information in the uploaded documents.",
+                answer="I could not find sufficiently relevant information in the uploaded documents.",
                 sources=[],
             )
 
         from langchain_core.messages import HumanMessage, SystemMessage
         from langchain_openai import ChatOpenAI
 
-        context = self._format_context(documents)
+        context = self._format_context(chunks)
         llm = ChatOpenAI(
             model=self.settings.openai_model,
             api_key=self.settings.openai_api_key,
@@ -70,28 +77,50 @@ class RAGService:
             ]
         )
         answer = response.content if isinstance(response.content, str) else str(response.content)
-        return ChatResponse(answer=answer, sources=self._sources(documents))
+        return ChatResponse(answer=answer, sources=self._sources(chunks))
+
+    def _retrieve(self, question: str) -> list[RetrievedChunk]:
+        candidate_k = max(self.settings.top_k, self.settings.retrieval_candidate_k)
+        results = self._vector_store().similarity_search_with_relevance_scores(
+            question, k=candidate_k
+        )
+        relevant = [
+            RetrievedChunk(document=document, relevance_score=score)
+            for document, score in results
+            if score >= self.settings.similarity_threshold
+        ]
+        return relevant[: self.settings.top_k]
 
     @staticmethod
-    def _format_context(documents: list[Document]) -> str:
+    def _format_context(chunks: list[RetrievedChunk]) -> str:
         entries: list[str] = []
-        for document in documents:
+        for chunk in chunks:
+            document = chunk.document
             filename = document.metadata.get("filename", "Unknown")
             page = document.metadata.get("page")
             page_label = f", page {page}" if page else ""
             entries.append(f"[Source: {filename}{page_label}]\n{document.page_content}")
         return "\n\n".join(entries)
 
-    @staticmethod
-    def _sources(documents: list[Document]) -> list[Source]:
-        seen: set[tuple[str, int | None, str]] = set()
+    def _sources(self, chunks: list[RetrievedChunk]) -> list[Source]:
+        seen: set[tuple[str, int | None, int | None, str]] = set()
         sources: list[Source] = []
-        for document in documents:
+        for chunk in chunks:
+            document = chunk.document
             filename = str(document.metadata.get("filename", "Unknown"))
             page = document.metadata.get("page")
-            excerpt = " ".join(document.page_content.split())[:300]
-            key = (filename, page, excerpt)
+            chunk_index = document.metadata.get("chunk_index")
+            excerpt = " ".join(document.page_content.split())[: self.settings.citation_excerpt_chars]
+            key = (filename, page, chunk_index, excerpt)
             if key not in seen:
                 seen.add(key)
-                sources.append(Source(filename=filename, excerpt=excerpt, page=page))
+                sources.append(
+                    Source(
+                        filename=filename,
+                        excerpt=excerpt,
+                        page=page,
+                        chunk_index=chunk_index,
+                        relevance_score=round(chunk.relevance_score, 3),
+                    )
+                )
         return sources

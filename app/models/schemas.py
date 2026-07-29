@@ -17,9 +17,10 @@ class Source(BaseModel):
     filename: str
     excerpt: str
     page: int | None = None
+    chunk_index: int | None = None
+    relevance_score: float | None = None
 
 
 class ChatResponse(BaseModel):
     answer: str
     sources: list[Source]
-

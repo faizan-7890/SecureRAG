@@ -28,11 +28,13 @@ class Settings(BaseSettings):
     upload_dir: Path = Field(default=PROJECT_ROOT / "data" / "uploads")
     chroma_collection: str = "securerag_documents"
     top_k: int = Field(default=4, ge=1, le=20)
-    chunk_size: int = Field(default=1000, ge=100)
-    chunk_overlap: int = Field(default=200, ge=0)
+    retrieval_candidate_k: int = Field(default=12, ge=1, le=50)
+    similarity_threshold: float = Field(default=0.35, ge=0.0, le=1.0)
+    citation_excerpt_chars: int = Field(default=350, ge=100, le=1_000)
+    chunk_size: int = Field(default=900, ge=100)
+    chunk_overlap: int = Field(default=150, ge=0)
 
 
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
-

@@ -14,7 +14,7 @@ This project is designed as a portfolio-quality foundation for Software Engineer
 - Local embeddings using `sentence-transformers/all-MiniLM-L6-v2`
 - Persistent Chroma vector store
 - Grounded responses generated with OpenAI
-- Source citations with filename, excerpt, and PDF page number when available
+- Source citations with filename, excerpt, PDF page, chunk index, and relevance score
 - FastAPI endpoints with interactive OpenAPI documentation
 - Typed configuration using `pydantic-settings` and `.env`
 - Tests covering health, input validation, and text ingestion
@@ -142,6 +142,9 @@ curl.exe -X POST "http://127.0.0.1:8000/chat" `
 | `UPLOAD_DIR` | `data/uploads` | Location for source uploads |
 | `CHROMA_COLLECTION` | `securerag_documents` | Chroma collection name |
 | `TOP_K` | `4` | Number of retrieved chunks |
+| `RETRIEVAL_CANDIDATE_K` | `12` | Candidates inspected before filtering |
+| `SIMILARITY_THRESHOLD` | `0.35` | Minimum relevance score accepted as context |
+| `CITATION_EXCERPT_CHARS` | `350` | Maximum characters in each cited excerpt |
 | `CHUNK_SIZE` | `1000` | Maximum chunk size in characters |
 | `CHUNK_OVERLAP` | `200` | Overlap between chunks |
 
@@ -161,11 +164,11 @@ Milestone 1 is complete:
 - [x] Ingestion and local vector storage
 - [x] Retrieval and OpenAI answer generation
 - [x] Citation-rich chat responses
-- [x] FastAPI service and tests
+- [x] FastAPI service and tests`r`n- [x] Relevance-threshold retrieval, richer chunk metadata, and scored citations
 
 Planned next:
 
-- [ ] Retrieval tuning and metadata improvements
+- [x] Retrieval tuning and metadata improvements
 - [ ] JWT authentication and document-level RBAC
 - [ ] Ragas evaluation with a golden dataset
 - [ ] Streamlit interface, structured logging, and expanded tests

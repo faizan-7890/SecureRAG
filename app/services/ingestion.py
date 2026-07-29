@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import re
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -76,24 +77,35 @@ class DocumentIngestionService:
         splitter = RecursiveCharacterTextSplitter(
             chunk_size=self.settings.chunk_size,
             chunk_overlap=self.settings.chunk_overlap,
-            separators=["\n\n", "\n", ". ", " ", ""],
+            separators=["\n# ", "\n## ", "\n### ", "\n\n", "\n", ". ", " ", ""],
+            keep_separator="start",
+            add_start_index=True,
         )
         chunks = splitter.split_documents(documents)
         if not chunks:
             raise EmptyDocumentError("No text chunks could be created from this document.")
 
-        upload_time = datetime.now(UTC).isoformat()
+        document_id = str(uuid4())
+        uploaded_at = datetime.now(UTC).isoformat()
+        source_sha256 = self._sha256(file_path)
+        source_size_bytes = file_path.stat().st_size
         ids: list[str] = []
         for index, chunk in enumerate(chunks):
+            chunk_id = f"{document_id}:{index}"
             chunk.metadata.update(
                 {
-                    "filename": original_filename,
-                    "uploaded_at": upload_time,
-                    "allowed_roles": "admin,user",
+                    "document_id": document_id,
+                    "chunk_id": chunk_id,
                     "chunk_index": index,
+                    "filename": original_filename,
+                    "file_extension": extension,
+                    "uploaded_at": uploaded_at,
+                    "source_sha256": source_sha256,
+                    "source_size_bytes": source_size_bytes,
+                    "allowed_roles": "admin,user",
                 }
             )
-            ids.append(str(uuid4()))
+            ids.append(chunk_id)
 
         self._vector_store().add_documents(chunks, ids=ids)
         return IngestionResult(filename=original_filename, chunks=len(chunks))
@@ -132,3 +144,11 @@ class DocumentIngestionService:
     @staticmethod
     def _normalise_text(text: str) -> str:
         return re.sub(r"\n{3,}", "\n\n", text).strip()
+
+    @staticmethod
+    def _sha256(file_path: Path) -> str:
+        digest = hashlib.sha256()
+        with file_path.open("rb") as source:
+            for block in iter(lambda: source.read(1024 * 1024), b""):
+                digest.update(block)
+        return digest.hexdigest()
