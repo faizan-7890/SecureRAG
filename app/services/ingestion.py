@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import hashlib
+import logging
 import re
+import time
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -11,6 +13,8 @@ from uuid import uuid4
 from pypdf import PdfReader
 
 from app.core.config import Settings
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from langchain_chroma import Chroma
@@ -63,6 +67,7 @@ class DocumentIngestionService:
         )
 
     def ingest(self, file_path: Path, original_filename: str, owner_id: str | None = None) -> IngestionResult:
+        start = time.perf_counter()
         extension = Path(original_filename).suffix.lower()
         if extension not in SUPPORTED_EXTENSIONS:
             supported = ", ".join(sorted(SUPPORTED_EXTENSIONS))
@@ -109,6 +114,19 @@ class DocumentIngestionService:
             ids.append(chunk_id)
 
         self._vector_store().add_documents(chunks, ids=ids)
+        duration_ms = round((time.perf_counter() - start) * 1000, 1)
+        logger.info(
+            "Ingested %s: %d chunks in %.1fms",
+            original_filename,
+            len(chunks),
+            duration_ms,
+            extra={
+                "doc_filename": original_filename,
+                "chunks": len(chunks),
+                "document_id": document_id,
+                "duration_ms": duration_ms,
+            },
+        )
         return IngestionResult(filename=original_filename, chunks=len(chunks))
 
     def _load_documents(

@@ -44,28 +44,31 @@ def test_chat_rejects_blank_question() -> None:
 
 
 def test_uploads_chunks_and_enriches_text_document(monkeypatch, tmp_path) -> None:
-    settings = get_settings()
-    monkeypatch.setattr(settings, "upload_dir", tmp_path / "uploads")
+    settings = Settings(upload_dir=tmp_path / "uploads")
+    app.dependency_overrides[get_settings] = lambda: settings
     vector_store = FakeVectorStore()
     monkeypatch.setattr(
         DocumentIngestionService, "_vector_store", lambda self: vector_store
     )
 
-    client = TestClient(app)
-    response = client.post(
-        "/documents/upload",
-        files={"file": ("policy.txt", b"Employees receive 20 days of annual leave.", "text/plain")},
-    )
+    try:
+        client = TestClient(app)
+        response = client.post(
+            "/documents/upload",
+            files={"file": ("policy.txt", b"Employees receive 20 days of annual leave.", "text/plain")},
+        )
 
-    assert response.status_code == 201
-    assert response.json()["message"] == "Document ingested"
-    assert response.json()["filename"] == "policy.txt"
-    assert response.json()["chunks"] == 1
-    assert vector_store.documents[0].metadata["filename"] == "policy.txt"
-    assert vector_store.documents[0].metadata["document_id"]
-    assert vector_store.documents[0].metadata["source_sha256"]
-    assert vector_store.documents[0].metadata["chunk_index"] == 0
-    assert vector_store.ids[0].endswith(":0")
+        assert response.status_code == 201
+        assert response.json()["message"] == "Document ingested"
+        assert response.json()["filename"] == "policy.txt"
+        assert response.json()["chunks"] == 1
+        assert vector_store.documents[0].metadata["filename"] == "policy.txt"
+        assert vector_store.documents[0].metadata["document_id"]
+        assert vector_store.documents[0].metadata["source_sha256"]
+        assert vector_store.documents[0].metadata["chunk_index"] == 0
+        assert vector_store.ids[0].endswith(":0")
+    finally:
+        app.dependency_overrides.pop(get_settings, None)
 
 
 def test_retrieval_filters_low_relevance_and_limits_results(monkeypatch) -> None:

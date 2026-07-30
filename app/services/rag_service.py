@@ -1,10 +1,14 @@
 from __future__ import annotations
 
+import logging
+import time
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from app.core.config import Settings
 from app.models.schemas import ChatResponse, Source
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from langchain_chroma import Chroma
@@ -45,6 +49,7 @@ class RAGService:
         )
 
     def answer(self, question: str, user: dict[str, str] | None = None) -> ChatResponse:
+        start = time.perf_counter()
         if not self.settings.openai_api_key:
             raise RuntimeError("OPENAI_API_KEY is not configured. Add it to your .env file.")
 
@@ -77,6 +82,13 @@ class RAGService:
             ]
         )
         answer = response.content if isinstance(response.content, str) else str(response.content)
+        duration_ms = round((time.perf_counter() - start) * 1000, 1)
+        logger.info(
+            "Answered in %.1fms with %d sources",
+            duration_ms,
+            len(chunks),
+            extra={"duration_ms": duration_ms, "chunks": len(chunks)},
+        )
         return ChatResponse(answer=answer, sources=self._sources(chunks))
 
     def _retrieve(self, question: str, user: dict[str, str] | None = None) -> list[RetrievedChunk]:
@@ -89,6 +101,12 @@ class RAGService:
             for document, score in results
             if score >= self.settings.similarity_threshold and (user is None or user["role"] == "admin" or document.metadata.get("owner_id") in {user["username"], "legacy"})
         ]
+        logger.info(
+            "Retrieved %d/%d candidates above threshold %.2f",
+            len(relevant),
+            len(results),
+            self.settings.similarity_threshold,
+        )
         return relevant[: self.settings.top_k]
 
     @staticmethod

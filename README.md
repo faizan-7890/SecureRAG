@@ -2,7 +2,7 @@
 
 [![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-API-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
-[![Status](https://img.shields.io/badge/status-Milestone%203%20in%20progress-success)](#roadmap)
+[![Status](https://img.shields.io/badge/status-Milestone%204%20complete-success)](#roadmap)
 
 SecureRAG is a production-style Retrieval-Augmented Generation (RAG) API for asking grounded questions over private documents. It ingests PDF, TXT, and Markdown files, stores their embeddings locally in Chroma, and returns OpenAI-generated answers with traceable source excerpts.
 
@@ -35,9 +35,10 @@ Client
 securerag/
 ├── app/
 │   ├── api/          # FastAPI route handlers
-│   ├── core/         # Configuration and future security utilities
+│   ├── core/         # Configuration, security, and structured logging
 │   ├── models/       # Request and response schemas
 │   └── services/     # Ingestion and RAG orchestration
+├── ui/               # Streamlit chat interface
 ├── data/uploads/     # Uploaded files, created at runtime
 ├── chroma_db/        # Persistent local vector store, created at runtime
 ├── tests/
@@ -83,6 +84,14 @@ uvicorn app.main:app --reload
 ```
 
 Open [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs) to use Swagger UI.
+
+### 5. Launch the Streamlit UI
+
+```powershell
+streamlit run ui/app.py
+```
+
+Open [http://localhost:8501](http://localhost:8501) to use the chat interface.
 
 ## API reference
 
@@ -147,6 +156,7 @@ curl.exe -X POST "http://127.0.0.1:8000/chat" `
 | `CITATION_EXCERPT_CHARS` | `350` | Maximum characters in each cited excerpt |
 | `CHUNK_SIZE` | `1000` | Maximum chunk size in characters |
 | `CHUNK_OVERLAP` | `200` | Overlap between chunks |
+| `LOG_LEVEL` | `INFO` | Logging verbosity (`DEBUG`, `INFO`, `WARNING`, `ERROR`) |
 
 ## Testing
 
@@ -155,23 +165,24 @@ $env:PYTEST_DISABLE_PLUGIN_AUTOLOAD='1'
 python -m pytest -q
 ```
 
-The project currently includes smoke tests for API health, question validation, and text upload/chunking.
+The project includes tests for API health, input validation, text ingestion, authentication flows, RBAC filtering, RAG retrieval, and structured logging.
 
 ## Current scope and roadmap
 
-Milestone 1 is complete:
+Milestones 1–4 are complete:
 
 - [x] Ingestion and local vector storage
 - [x] Retrieval and OpenAI answer generation
 - [x] Citation-rich chat responses
-- [x] FastAPI service and tests`r`n- [x] Relevance-threshold retrieval, richer chunk metadata, and scored citations
+- [x] FastAPI service and tests
+- [x] Relevance-threshold retrieval, richer chunk metadata, and scored citations
+- [x] Retrieval tuning and metadata improvements
+- [x] JWT authentication and document-level RBAC
+- [x] Streamlit interface, structured logging, and expanded tests
 
 Planned next:
 
-- [x] Retrieval tuning and metadata improvements
-- [x] JWT authentication and document-level RBAC
 - [ ] Ragas evaluation with a golden dataset
-- [ ] Streamlit interface, structured logging, and expanded tests
 
 ## Design notes
 

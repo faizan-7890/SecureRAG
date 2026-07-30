@@ -37,6 +37,7 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = Field(default=60, ge=5, le=1440)
     auth_bootstrap_admin: str | None = None
     auth_bootstrap_password: str | None = None
+    log_level: str = "INFO"
 
 
 @lru_cache
