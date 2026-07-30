@@ -3,17 +3,19 @@ from __future__ import annotations
 from pathlib import Path
 from uuid import uuid4
 
-from fastapi import APIRouter, File, HTTPException, UploadFile, status
+from typing import Annotated
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 
 from app.core.config import get_settings
 from app.models.schemas import UploadResponse
+from app.core.security import current_user
 
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 
 
 @router.post("/upload", response_model=UploadResponse, status_code=status.HTTP_201_CREATED)
-async def upload_document(file: UploadFile = File(...)) -> UploadResponse:
+async def upload_document(file: UploadFile = File(...), user: Annotated[dict[str, str] | None, Depends(current_user)] = None) -> UploadResponse:
     from app.services.ingestion import (
         DocumentIngestionService,
         EmptyDocumentError,
@@ -37,7 +39,7 @@ async def upload_document(file: UploadFile = File(...)) -> UploadResponse:
     stored_path.write_bytes(content)
 
     try:
-        result = DocumentIngestionService(settings).ingest(stored_path, original_filename)
+        result = DocumentIngestionService(settings).ingest(stored_path, original_filename, user["username"] if user else None)
     except (UnsupportedDocumentError, EmptyDocumentError) as error:
         stored_path.unlink(missing_ok=True)
         raise HTTPException(status_code=400, detail=str(error)) from error

@@ -44,11 +44,11 @@ class RAGService:
             embedding_function=self.embeddings,
         )
 
-    def answer(self, question: str) -> ChatResponse:
+    def answer(self, question: str, user: dict[str, str] | None = None) -> ChatResponse:
         if not self.settings.openai_api_key:
             raise RuntimeError("OPENAI_API_KEY is not configured. Add it to your .env file.")
 
-        chunks = self._retrieve(question)
+        chunks = self._retrieve(question, user)
         if not chunks:
             return ChatResponse(
                 answer="I could not find sufficiently relevant information in the uploaded documents.",
@@ -79,7 +79,7 @@ class RAGService:
         answer = response.content if isinstance(response.content, str) else str(response.content)
         return ChatResponse(answer=answer, sources=self._sources(chunks))
 
-    def _retrieve(self, question: str) -> list[RetrievedChunk]:
+    def _retrieve(self, question: str, user: dict[str, str] | None = None) -> list[RetrievedChunk]:
         candidate_k = max(self.settings.top_k, self.settings.retrieval_candidate_k)
         results = self._vector_store().similarity_search_with_relevance_scores(
             question, k=candidate_k
@@ -87,7 +87,7 @@ class RAGService:
         relevant = [
             RetrievedChunk(document=document, relevance_score=score)
             for document, score in results
-            if score >= self.settings.similarity_threshold
+            if score >= self.settings.similarity_threshold and (user is None or user["role"] == "admin" or document.metadata.get("owner_id") in {user["username"], "legacy"})
         ]
         return relevant[: self.settings.top_k]
 

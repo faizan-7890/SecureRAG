@@ -62,7 +62,7 @@ class DocumentIngestionService:
             embedding_function=self.embeddings,
         )
 
-    def ingest(self, file_path: Path, original_filename: str) -> IngestionResult:
+    def ingest(self, file_path: Path, original_filename: str, owner_id: str | None = None) -> IngestionResult:
         extension = Path(original_filename).suffix.lower()
         if extension not in SUPPORTED_EXTENSIONS:
             supported = ", ".join(sorted(SUPPORTED_EXTENSIONS))
@@ -103,6 +103,7 @@ class DocumentIngestionService:
                     "source_sha256": source_sha256,
                     "source_size_bytes": source_size_bytes,
                     "allowed_roles": "admin,user",
+                    "owner_id": owner_id or "legacy",
                 }
             )
             ids.append(chunk_id)

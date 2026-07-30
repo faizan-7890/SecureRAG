@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 
-from app.api import chat, documents
+from app.api import auth, chat, documents
 from app.core.config import get_settings
 
 
@@ -12,6 +12,7 @@ app = FastAPI(
 )
 app.include_router(documents.router)
 app.include_router(chat.router)
+app.include_router(auth.router)
 
 
 @app.get("/health", tags=["health"])

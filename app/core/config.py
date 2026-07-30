@@ -33,6 +33,10 @@ class Settings(BaseSettings):
     citation_excerpt_chars: int = Field(default=350, ge=100, le=1_000)
     chunk_size: int = Field(default=900, ge=100)
     chunk_overlap: int = Field(default=150, ge=0)
+    auth_secret: str | None = None
+    access_token_expire_minutes: int = Field(default=60, ge=5, le=1440)
+    auth_bootstrap_admin: str | None = None
+    auth_bootstrap_password: str | None = None
 
 
 @lru_cache

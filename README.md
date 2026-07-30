@@ -2,7 +2,7 @@
 
 [![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-API-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
-[![Status](https://img.shields.io/badge/status-Milestone%201%20complete-success)](#roadmap)
+[![Status](https://img.shields.io/badge/status-Milestone%203%20in%20progress-success)](#roadmap)
 
 SecureRAG is a production-style Retrieval-Augmented Generation (RAG) API for asking grounded questions over private documents. It ingests PDF, TXT, and Markdown files, stores their embeddings locally in Chroma, and returns OpenAI-generated answers with traceable source excerpts.
 
@@ -169,7 +169,7 @@ Milestone 1 is complete:
 Planned next:
 
 - [x] Retrieval tuning and metadata improvements
-- [ ] JWT authentication and document-level RBAC
+- [x] JWT authentication and document-level RBAC
 - [ ] Ragas evaluation with a golden dataset
 - [ ] Streamlit interface, structured logging, and expanded tests
 
