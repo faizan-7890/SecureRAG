@@ -1,0 +1,140 @@
+[
+  {
+    "question": "How many days of annual leave do full-time employees receive?",
+    "ground_truth": "Full-time employees are entitled to 20 days of paid annual leave per calendar year.",
+    "ground_truth_contexts": [
+      "Full-time employees are entitled to 20 days of paid annual leave per calendar year. Leave accrues at a rate of 1.67 days per month of continuous service."
+    ]
+  },
+  {
+    "question": "How many unused annual leave days can be carried over to the next year?",
+    "ground_truth": "Up to 5 days of unused annual leave may be carried over, and they must be used by March 31 of the following year.",
+    "ground_truth_contexts": [
+      "Unused annual leave may be carried over into the following year, up to a maximum of 5 days. Any carried-over days must be used by March 31 of the following year or they will be forfeited."
+    ]
+  },
+  {
+    "question": "How far in advance must leave requests be submitted for a 5-day vacation?",
+    "ground_truth": "Leave requests for periods exceeding 3 days must be submitted at least 15 business days in advance.",
+    "ground_truth_contexts": [
+      "Leave requests must be submitted through the HR portal at least 5 business days in advance for periods of 3 days or fewer, and at least 15 business days in advance for periods exceeding 3 days."
+    ]
+  },
+  {
+    "question": "How many sick days do employees get per year?",
+    "ground_truth": "Employees receive 10 days of paid sick leave per calendar year.",
+    "ground_truth_contexts": [
+      "Employees receive 10 days of paid sick leave per calendar year. Sick leave does not accrue and resets on January 1 each year."
+    ]
+  },
+  {
+    "question": "When is a medical certificate required for sick leave?",
+    "ground_truth": "A medical certificate is required for absences of 3 or more consecutive business days.",
+    "ground_truth_contexts": [
+      "A medical certificate is required for absences of 3 or more consecutive business days."
+    ]
+  },
+  {
+    "question": "How many days per week can employees work remotely?",
+    "ground_truth": "Employees in eligible roles may work remotely up to 3 days per week, subject to manager approval.",
+    "ground_truth_contexts": [
+      "Employees in eligible roles may work remotely up to 3 days per week, subject to manager approval."
+    ]
+  },
+  {
+    "question": "What are the core business hours for remote workers?",
+    "ground_truth": "Remote workers must be available during core business hours from 10:00 AM to 4:00 PM local time.",
+    "ground_truth_contexts": [
+      "Employees working remotely must be available during core business hours (10:00 AM to 4:00 PM local time) and must maintain a reliable internet connection with a minimum speed of 25 Mbps download and 5 Mbps upload."
+    ]
+  },
+  {
+    "question": "How much is the home office stipend?",
+    "ground_truth": "The company provides a one-time home office stipend of $500 for employees who work remotely at least 2 days per week.",
+    "ground_truth_contexts": [
+      "The company provides a one-time home office stipend of $500 for employees who work remotely at least 2 days per week. This stipend is intended to cover ergonomic furniture, monitors, or other equipment."
+    ]
+  },
+  {
+    "question": "What is the daily meal limit for international business travel?",
+    "ground_truth": "The daily meal limit for international business travel is $100 per day.",
+    "ground_truth_contexts": [
+      "The following daily spending limits apply for business travel:\n- Meals: $75 per day (domestic), $100 per day (international)"
+    ]
+  },
+  {
+    "question": "When is business class air travel permitted?",
+    "ground_truth": "Business class requires prior written approval from a Vice President or above.",
+    "ground_truth_contexts": [
+      "Air travel must be booked in economy class unless the flight duration exceeds 6 hours, in which case premium economy is permitted. Business class requires prior written approval from a Vice President or above."
+    ]
+  },
+  {
+    "question": "What is the deadline for submitting expense reports?",
+    "ground_truth": "Business expenses must be submitted within 30 days of being incurred.",
+    "ground_truth_contexts": [
+      "Business expenses must be submitted through the expense management system within 30 days of being incurred. All claims must include itemized receipts."
+    ]
+  },
+  {
+    "question": "What is the maximum gift value employees can accept without approval?",
+    "ground_truth": "Employees may not accept gifts or entertainment valued at more than $100 from vendors or clients without prior approval from the Compliance department.",
+    "ground_truth_contexts": [
+      "Accepting gifts or entertainment valued at more than $100 from vendors or clients without prior approval from the Compliance department"
+    ]
+  },
+  {
+    "question": "How often are performance reviews conducted?",
+    "ground_truth": "Performance reviews are conducted semi-annually in June and December.",
+    "ground_truth_contexts": [
+      "Performance reviews are conducted semi-annually in June and December. Each review cycle includes a self-assessment, manager evaluation, and a one-on-one feedback meeting."
+    ]
+  },
+  {
+    "question": "What happens to employees who receive a rating of 1 or 2?",
+    "ground_truth": "Employees who receive a rating of 1 or 2 are placed on a Performance Improvement Plan (PIP) lasting 90 days. Those who don't improve may face reassignment or termination.",
+    "ground_truth_contexts": [
+      "Employees who receive a rating of 1 or 2 are placed on a Performance Improvement Plan (PIP) lasting 90 days. Employees who do not demonstrate satisfactory improvement during the PIP period may face reassignment or termination."
+    ]
+  },
+  {
+    "question": "How many weeks of parental leave do primary caregivers receive?",
+    "ground_truth": "Primary caregivers are entitled to 16 weeks of fully paid parental leave.",
+    "ground_truth_contexts": [
+      "Primary caregivers are entitled to 16 weeks of fully paid parental leave. Secondary caregivers are entitled to 4 weeks of fully paid parental leave."
+    ]
+  },
+  {
+    "question": "How much parental leave do secondary caregivers get?",
+    "ground_truth": "Secondary caregivers are entitled to 4 weeks of fully paid parental leave.",
+    "ground_truth_contexts": [
+      "Secondary caregivers are entitled to 4 weeks of fully paid parental leave."
+    ]
+  },
+  {
+    "question": "What is the annual training budget per employee?",
+    "ground_truth": "Acme Corporation allocates an annual training budget of $2,000 per employee for professional development.",
+    "ground_truth_contexts": [
+      "Acme Corporation allocates an annual training budget of $2,000 per employee for professional development activities including conferences, courses, certifications, and books."
+    ]
+  },
+  {
+    "question": "When must employees repay training reimbursement?",
+    "ground_truth": "Employees who leave the company within 12 months of receiving training reimbursement exceeding $1,000 are required to repay the full amount.",
+    "ground_truth_contexts": [
+      "Employees who leave the company within 12 months of receiving training reimbursement exceeding $1,000 are required to repay the full amount. This repayment clause is waived in cases of involuntary termination not related to performance or misconduct."
+    ]
+  },
+  {
+    "question": "What is the domestic accommodation limit for business travel?",
+    "ground_truth": "Domestic accommodation is limited to up to $200 per night.",
+    "ground_truth_contexts": [
+      "Accommodation: up to $200 per night (domestic), up to $350 per night (international)"
+    ]
+  },
+  {
+    "question": "Does the company offer stock options to employees?",
+    "ground_truth": "The company policy document does not contain any information about stock options.",
+    "ground_truth_contexts": []
+  }
+]

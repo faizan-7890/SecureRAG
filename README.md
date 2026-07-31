@@ -2,7 +2,7 @@
 
 [![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-API-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
-[![Status](https://img.shields.io/badge/status-Milestone%204%20complete-success)](#roadmap)
+[![Status](https://img.shields.io/badge/status-All%20milestones%20complete-success)](#roadmap)
 
 SecureRAG is a production-style Retrieval-Augmented Generation (RAG) API for asking grounded questions over private documents. It ingests PDF, TXT, and Markdown files, stores their embeddings locally in Chroma, and returns OpenAI-generated answers with traceable source excerpts.
 
@@ -39,7 +39,11 @@ securerag/
 │   ├── models/       # Request and response schemas
 │   └── services/     # Ingestion and RAG orchestration
 ├── ui/               # Streamlit chat interface
-├── data/uploads/     # Uploaded files, created at runtime
+├── eval/             # Ragas evaluation pipeline
+│   └── results/      # Evaluation output (gitignored)
+├── data/
+│   ├── uploads/      # Uploaded files, created at runtime
+│   └── eval/         # Golden dataset and sample document
 ├── chroma_db/        # Persistent local vector store, created at runtime
 ├── tests/
 ├── .env.example
@@ -167,9 +171,25 @@ python -m pytest -q
 
 The project includes tests for API health, input validation, text ingestion, authentication flows, RBAC filtering, RAG retrieval, and structured logging.
 
+## Evaluation
+
+Run the Ragas evaluation pipeline against the bundled golden dataset:
+
+```powershell
+..\.venv\Scripts\python.exe -m eval.run_evaluation
+```
+
+This will:
+1. Ingest the sample policy document into an isolated Chroma collection
+2. Query the RAG pipeline for each of the 20 golden questions
+3. Evaluate using Ragas metrics (faithfulness, answer relevancy, context precision, context recall, answer correctness)
+4. Print a summary table and save detailed results to `eval/results/evaluation_results.json`
+
+Requires `OPENAI_API_KEY` to be set (Ragas uses an LLM as a judge).
+
 ## Current scope and roadmap
 
-Milestones 1–4 are complete:
+All milestones are complete:
 
 - [x] Ingestion and local vector storage
 - [x] Retrieval and OpenAI answer generation
@@ -179,17 +199,15 @@ Milestones 1–4 are complete:
 - [x] Retrieval tuning and metadata improvements
 - [x] JWT authentication and document-level RBAC
 - [x] Streamlit interface, structured logging, and expanded tests
-
-Planned next:
-
-- [ ] Ragas evaluation with a golden dataset
+- [x] Ragas evaluation with a golden dataset
 
 ## Design notes
 
 - Embeddings run locally to keep ingestion inexpensive and reduce external dependencies.
 - Chroma persists on disk, so uploaded knowledge remains available after restart.
 - RAG services load lazily, keeping API startup responsive.
-- Authentication and RBAC are intentionally deferred to Milestone 3 rather than partially implemented in the MVP.
+- Authentication and RBAC were deferred to Milestone 3 rather than partially implemented in the MVP.
+- The Ragas evaluation uses a temporary Chroma collection so it does not pollute production data.
 
 ## License
 
