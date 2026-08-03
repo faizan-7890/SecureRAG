@@ -34,7 +34,7 @@ def test_retrieve_rbac_admin_sees_all(monkeypatch):
     doc_b = _make_doc(owner_id="bob")
     store = FakeRetrievalStore([(doc_a, 0.9), (doc_b, 0.85)])
 
-    settings = Settings(openai_api_key="k", top_k=10, retrieval_candidate_k=10, similarity_threshold=0.3)
+    settings = Settings(openai_api_key="k", top_k=10, retrieval_candidate_k=10, similarity_threshold=0.3, enable_hybrid_search=False)
     service = RAGService(settings)
     monkeypatch.setattr(service, "_vector_store", lambda: store)
 
@@ -50,7 +50,7 @@ def test_retrieve_rbac_user_sees_own_and_legacy(monkeypatch):
     other_doc = _make_doc(owner_id="bob")
     store = FakeRetrievalStore([(own_doc, 0.9), (legacy_doc, 0.85), (other_doc, 0.8)])
 
-    settings = Settings(openai_api_key="k", top_k=10, retrieval_candidate_k=10, similarity_threshold=0.3)
+    settings = Settings(openai_api_key="k", top_k=10, retrieval_candidate_k=10, similarity_threshold=0.3, enable_hybrid_search=False)
     service = RAGService(settings)
     monkeypatch.setattr(service, "_vector_store", lambda: store)
 
@@ -65,7 +65,7 @@ def test_retrieve_respects_top_k(monkeypatch):
     docs = [(_make_doc(content=f"doc{i}"), 0.9 - i * 0.01) for i in range(10)]
     store = FakeRetrievalStore(docs)
 
-    settings = Settings(openai_api_key="k", top_k=3, retrieval_candidate_k=10, similarity_threshold=0.3)
+    settings = Settings(openai_api_key="k", top_k=3, retrieval_candidate_k=10, similarity_threshold=0.3, enable_hybrid_search=False)
     service = RAGService(settings)
     monkeypatch.setattr(service, "_vector_store", lambda: store)
 
@@ -78,7 +78,7 @@ def test_retrieve_filters_below_threshold(monkeypatch):
     low = _make_doc(content="irrelevant")
     store = FakeRetrievalStore([(high, 0.9), (low, 0.1)])
 
-    settings = Settings(openai_api_key="k", top_k=10, retrieval_candidate_k=10, similarity_threshold=0.5)
+    settings = Settings(openai_api_key="k", top_k=10, retrieval_candidate_k=10, similarity_threshold=0.5, enable_hybrid_search=False)
     service = RAGService(settings)
     monkeypatch.setattr(service, "_vector_store", lambda: store)
 

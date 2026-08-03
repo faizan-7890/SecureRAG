@@ -80,6 +80,7 @@ def test_retrieval_filters_low_relevance_and_limits_results(monkeypatch) -> None
         top_k=1,
         retrieval_candidate_k=5,
         similarity_threshold=0.5,
+        enable_hybrid_search=False,
     )
     service = RAGService(settings)
     monkeypatch.setattr(service, "_vector_store", lambda: vector_store)

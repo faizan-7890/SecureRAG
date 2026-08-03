@@ -26,7 +26,12 @@ def chat(request: ChatRequest, user: Annotated[dict[str, str] | None, Depends(cu
     )
 
     try:
-        return RAGService(get_settings()).answer(question, user)
+        return RAGService(get_settings()).answer(
+            question=question,
+            user=user,
+            hybrid_search=request.hybrid_search,
+            query_expansion=request.query_expansion,
+        )
     except RuntimeError as error:
         logger.error("Chat service error: %s", error)
         raise HTTPException(status_code=503, detail=str(error)) from error

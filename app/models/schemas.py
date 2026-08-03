@@ -23,6 +23,8 @@ class TokenResponse(BaseModel):
 
 class ChatRequest(BaseModel):
     question: str = Field(min_length=1, max_length=2_000)
+    hybrid_search: bool | None = None
+    query_expansion: bool | None = None
 
 
 class Source(BaseModel):

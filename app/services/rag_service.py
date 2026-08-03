@@ -48,12 +48,29 @@ class RAGService:
             embedding_function=self.embeddings,
         )
 
-    def answer(self, question: str, user: dict[str, str] | None = None) -> ChatResponse:
+    def _bm25_index(self):
+        from app.services.hybrid_search import BM25Index
+
+        bm25_path = self.settings.bm25_index_path or (self.settings.chroma_path / "bm25_index.json")
+        return BM25Index.load(bm25_path)
+
+    def answer(
+        self,
+        question: str,
+        user: dict[str, str] | None = None,
+        hybrid_search: bool | None = None,
+        query_expansion: bool | None = None,
+    ) -> ChatResponse:
         start = time.perf_counter()
         if not self.settings.openai_api_key:
             raise RuntimeError("OPENAI_API_KEY is not configured. Add it to your .env file.")
 
-        chunks = self._retrieve(question, user)
+        chunks = self._retrieve(
+            question,
+            user=user,
+            hybrid_search=hybrid_search,
+            query_expansion=query_expansion,
+        )
         if not chunks:
             return ChatResponse(
                 answer="I could not find sufficiently relevant information in the uploaded documents.",
@@ -91,20 +108,80 @@ class RAGService:
         )
         return ChatResponse(answer=answer, sources=self._sources(chunks))
 
-    def _retrieve(self, question: str, user: dict[str, str] | None = None) -> list[RetrievedChunk]:
+    def _retrieve(
+        self,
+        question: str,
+        user: dict[str, str] | None = None,
+        hybrid_search: bool | None = None,
+        query_expansion: bool | None = None,
+    ) -> list[RetrievedChunk]:
+        use_hybrid = self.settings.enable_hybrid_search if hybrid_search is None else hybrid_search
+        use_expansion = self.settings.enable_query_expansion if query_expansion is None else query_expansion
         candidate_k = max(self.settings.top_k, self.settings.retrieval_candidate_k)
-        results = self._vector_store().similarity_search_with_relevance_scores(
-            question, k=candidate_k
-        )
+
+        if use_expansion:
+            from app.services.hybrid_search import MultiQueryExpander
+            queries = MultiQueryExpander.expand(question, self.settings, count=self.settings.query_expansion_count)
+        else:
+            queries = [question]
+
+        all_candidates: dict[str, RetrievedChunk] = {}
+
+        for q in queries:
+            if use_hybrid:
+                from app.services.hybrid_search import reciprocal_rank_fusion
+
+                # 1. Dense retrieval
+                dense_raw = self._vector_store().similarity_search_with_relevance_scores(q, k=candidate_k)
+                dense_chunks = [
+                    RetrievedChunk(document=doc, relevance_score=score)
+                    for doc, score in dense_raw
+                    if score >= self.settings.similarity_threshold and (user is None or user.get("role") == "admin" or getattr(doc, "metadata", {}).get("owner_id") in {user.get("username"), "legacy"})
+                ]
+
+                # 2. Sparse BM25 retrieval
+                sparse_results = self._bm25_index().search(q, top_k=candidate_k, user=user)
+
+                # 3. Fuse dense and sparse results
+                fused = reciprocal_rank_fusion(
+                    dense_results=dense_chunks,
+                    sparse_results=sparse_results,
+                    rrf_k=self.settings.rrf_k,
+                    dense_weight=self.settings.dense_weight,
+                    sparse_weight=self.settings.sparse_weight,
+                )
+            else:
+                results = self._vector_store().similarity_search_with_relevance_scores(q, k=candidate_k)
+                fused = [
+                    RetrievedChunk(document=document, relevance_score=score)
+                    for document, score in results
+                    if score >= self.settings.similarity_threshold and (user is None or user.get("role") == "admin" or getattr(document, "metadata", {}).get("owner_id") in {user.get("username"), "legacy"})
+                ]
+
+            for chunk in fused:
+                meta = getattr(chunk.document, "metadata", {})
+                content_snippet = getattr(chunk.document, "page_content", "")[:100]
+                doc_key = str(
+                    meta.get("chunk_id")
+                    or f"{meta.get('filename')}:{meta.get('chunk_index')}:{content_snippet}:{meta.get('owner_id')}"
+                )
+                if doc_key not in all_candidates or chunk.relevance_score > all_candidates[doc_key].relevance_score:
+                    all_candidates[doc_key] = chunk
+
+        # Filter by similarity threshold
         relevant = [
-            RetrievedChunk(document=document, relevance_score=score)
-            for document, score in results
-            if score >= self.settings.similarity_threshold and (user is None or user["role"] == "admin" or document.metadata.get("owner_id") in {user["username"], "legacy"})
+            chunk
+            for chunk in all_candidates.values()
+            if chunk.relevance_score >= self.settings.similarity_threshold
         ]
+        relevant.sort(key=lambda c: c.relevance_score, reverse=True)
+
         logger.info(
-            "Retrieved %d/%d candidates above threshold %.2f",
+            "Retrieved %d candidates (hybrid=%s, expansion=%s, queries=%d) above threshold %.2f",
             len(relevant),
-            len(results),
+            use_hybrid,
+            use_expansion,
+            len(queries),
             self.settings.similarity_threshold,
         )
         return relevant[: self.settings.top_k]

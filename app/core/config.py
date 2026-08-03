@@ -38,6 +38,13 @@ class Settings(BaseSettings):
     auth_bootstrap_admin: str | None = None
     auth_bootstrap_password: str | None = None
     log_level: str = "INFO"
+    enable_hybrid_search: bool = True
+    enable_query_expansion: bool = False
+    dense_weight: float = Field(default=0.6, ge=0.0, le=1.0)
+    sparse_weight: float = Field(default=0.4, ge=0.0, le=1.0)
+    rrf_k: int = Field(default=60, ge=1, le=200)
+    query_expansion_count: int = Field(default=3, ge=1, le=5)
+    bm25_index_path: Path | None = None
 
 
 @lru_cache

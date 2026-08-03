@@ -244,6 +244,21 @@ with st.sidebar:
 
     st.divider()
 
+    # ── Search Strategy ──
+    st.markdown("### 🔀 Search Strategy")
+    hybrid_search_enabled = st.toggle(
+        "Hybrid Search (BM25 + Vector)",
+        value=True,
+        help="Combine dense semantic vector search with sparse BM25 keyword matching via Reciprocal Rank Fusion (RRF).",
+    )
+    query_expansion_enabled = st.toggle(
+        "Multi-Query Expansion",
+        value=False,
+        help="Use LLM to formulate complementary sub-queries for richer retrieval on complex questions.",
+    )
+
+    st.divider()
+
     # ── Clear conversation ──
     if st.button("🗑️ Clear Chat", use_container_width=True):
         st.session_state.messages = []
@@ -299,7 +314,12 @@ if prompt := st.chat_input("Ask a question about your documents…"):
     # Call API
     with st.chat_message("assistant"):
         with st.spinner("Thinking…"):
-            resp = _api("POST", "/chat", json={"question": prompt})
+            payload = {
+                "question": prompt,
+                "hybrid_search": hybrid_search_enabled,
+                "query_expansion": query_expansion_enabled,
+            }
+            resp = _api("POST", "/chat", json=payload)
 
         if resp and resp.status_code == 200:
             data = resp.json()

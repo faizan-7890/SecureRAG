@@ -1,4 +1,4 @@
-"""SecureRAG — Ragas Evaluation Pipeline.
+r"""SecureRAG — Ragas Evaluation Pipeline.
 
 Ingests the sample policy document, queries the RAG pipeline for each
 golden-dataset question, and evaluates retrieval + generation quality
@@ -14,9 +14,36 @@ import json
 import logging
 import sys
 import time
+import types
 from datetime import UTC, datetime
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from uuid import uuid4
+
+# ---------------------------------------------------------------------------
+# Compatibility shims for Windows and LangChain ecosystem
+# ---------------------------------------------------------------------------
+
+# Windows uuid-utils shim (for chromadb)
+if "uuid_utils" not in sys.modules:
+    uuid_utils = types.ModuleType("uuid_utils")
+    compat = types.ModuleType("uuid_utils.compat")
+    compat.uuid7 = uuid4
+    uuid_utils.compat = compat
+    sys.modules["uuid_utils"] = uuid_utils
+    sys.modules["uuid_utils.compat"] = compat
+
+# LangChain VertexAI module shim (for ragas 0.2.x import compatibility)
+if "langchain_community.chat_models.vertexai" not in sys.modules:
+    vertexai_module = types.ModuleType("langchain_community.chat_models.vertexai")
+    try:
+        from langchain_google_vertexai import ChatVertexAI
+        vertexai_module.ChatVertexAI = ChatVertexAI
+    except Exception:
+        class _ChatVertexAIFallback:
+            pass
+        vertexai_module.ChatVertexAI = _ChatVertexAIFallback
+    sys.modules["langchain_community.chat_models.vertexai"] = vertexai_module
 
 # ---------------------------------------------------------------------------
 # Paths

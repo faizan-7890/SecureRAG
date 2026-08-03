@@ -114,6 +114,14 @@ class DocumentIngestionService:
             ids.append(chunk_id)
 
         self._vector_store().add_documents(chunks, ids=ids)
+
+        # Update BM25 sparse index
+        bm25_path = self.settings.bm25_index_path or (self.settings.chroma_path / "bm25_index.json")
+        from app.services.hybrid_search import BM25Index
+        bm25 = BM25Index.load(bm25_path)
+        bm25.add_documents(chunks, ids=ids)
+        bm25.save(bm25_path)
+
         duration_ms = round((time.perf_counter() - start) * 1000, 1)
         logger.info(
             "Ingested %s: %d chunks in %.1fms",
