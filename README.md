@@ -119,7 +119,7 @@ curl.exe -X POST "http://127.0.0.1:8000/documents/upload" `
 }
 ```
 
-### Ask a question
+### Ask a question (Synchronous)
 
 ```http
 POST /chat
@@ -129,7 +129,7 @@ Content-Type: application/json
 ```powershell
 curl.exe -X POST "http://127.0.0.1:8000/chat" `
   -H "Content-Type: application/json" `
-  -d "{\"question\": \"What is the leave policy?\"}"
+  -d "{\"question\": \"What is the leave policy?\", \"session_id\": \"my-session\"}"
 ```
 
 ```json
@@ -139,10 +139,41 @@ curl.exe -X POST "http://127.0.0.1:8000/chat" `
     {
       "filename": "policy.pdf",
       "excerpt": "Employees receive 20 days of annual leave...",
-      "page": 2
+      "page": 2,
+      "relevance_score": 0.94
     }
-  ]
+  ],
+  "session_id": "my-session"
 }
+```
+
+### Ask a question (Real-Time SSE Streaming)
+
+```http
+POST /chat/stream
+Accept: text/event-stream
+Content-Type: application/json
+```
+
+```powershell
+curl.exe -N -X POST "http://127.0.0.1:8000/chat/stream" `
+  -H "Content-Type: application/json" `
+  -d "{\"question\": \"What is the leave policy?\"}"
+```
+
+Server-Sent Events emitted:
+```text
+event: sources
+data: {"sources":[{"filename":"policy.pdf","excerpt":"...","page":2,"chunk_index":0,"relevance_score":0.94}]}
+
+event: token
+data: {"token":"Employees "}
+
+event: token
+data: {"token":"receive 20 days of annual leave."}
+
+event: done
+data: {"done":true,"total_tokens":8,"session_id":"my-session"}
 ```
 
 ## Configuration
@@ -160,6 +191,15 @@ curl.exe -X POST "http://127.0.0.1:8000/chat" `
 | `CITATION_EXCERPT_CHARS` | `350` | Maximum characters in each cited excerpt |
 | `CHUNK_SIZE` | `1000` | Maximum chunk size in characters |
 | `CHUNK_OVERLAP` | `200` | Overlap between chunks |
+| `ENABLE_HYBRID_SEARCH` | `true` | Enable BM25 + Vector Reciprocal Rank Fusion (RRF) |
+| `ENABLE_QUERY_EXPANSION` | `false` | Enable LLM multi-query expansion |
+| `ENABLE_STREAMING` | `true` | Enable real-time SSE token streaming |
+| `MAX_HISTORY_MESSAGES` | `10` | Maximum turns remembered in conversational session |
+| `ENABLE_QUERY_RECONTEXTUALIZATION` | `true` | Rewrite multi-turn follow-up questions before retrieval |
+| `RRF_K` | `60` | RRF constant parameter |
+| `DENSE_WEIGHT` | `0.6` | Weight allocated to vector similarity |
+| `SPARSE_WEIGHT` | `0.4` | Weight allocated to BM25 keyword score |
+| `MULTI_QUERY_COUNT` | `3` | Number of query variations generated during expansion |
 | `LOG_LEVEL` | `INFO` | Logging verbosity (`DEBUG`, `INFO`, `WARNING`, `ERROR`) |
 
 ## Testing
@@ -169,14 +209,14 @@ $env:PYTEST_DISABLE_PLUGIN_AUTOLOAD='1'
 python -m pytest -q
 ```
 
-The project includes tests for API health, input validation, text ingestion, authentication flows, RBAC filtering, RAG retrieval, and structured logging.
+The project includes tests for API health, input validation, text ingestion, authentication flows, RBAC filtering, RAG retrieval, BM25 indexing, RRF ranking, multi-query expansion, SSE token streaming, and conversational memory.
 
 ## Evaluation
 
 Run the Ragas evaluation pipeline against the bundled golden dataset:
 
 ```powershell
-..\.venv\Scripts\python.exe -m eval.run_evaluation
+.\.venv\Scripts\python.exe -m eval.run_evaluation
 ```
 
 This will:
@@ -200,6 +240,10 @@ All milestones are complete:
 - [x] JWT authentication and document-level RBAC
 - [x] Streamlit interface, structured logging, and expanded tests
 - [x] Ragas evaluation with a golden dataset
+- [x] Hybrid Search (BM25 + Vector Reciprocal Rank Fusion) and Multi-Query Expansion
+- [x] Real-Time Streaming Responses (SSE) and Conversational Multi-Turn Memory
+
+
 
 ## Design notes
 

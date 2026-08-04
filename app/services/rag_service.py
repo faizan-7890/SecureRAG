@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from app.core.config import Settings
-from app.models.schemas import ChatResponse, Source
+from app.models.schemas import ChatMessage, ChatResponse, Source
 
 logger = logging.getLogger(__name__)
 
@@ -54,10 +54,81 @@ class RAGService:
         bm25_path = self.settings.bm25_index_path or (self.settings.chroma_path / "bm25_index.json")
         return BM25Index.load(bm25_path)
 
+    def _recontextualize_query(self, question: str, history: list[ChatMessage] | None) -> str:
+        """Condense dialogue history and follow-up question into a standalone query."""
+        if not history or not self.settings.enable_query_recontextualization or not self.settings.openai_api_key:
+            return question
+
+        from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+        from langchain_openai import ChatOpenAI
+
+        messages = [
+            SystemMessage(
+                content=(
+                    "Given a chat history and the latest user question which might reference context in the chat history, "
+                    "formulate a standalone question which can be understood without the chat history. "
+                    "Do NOT answer the question, just reformulate it if needed and otherwise return it as is."
+                )
+            )
+        ]
+        for msg in history[-self.settings.max_history_messages:]:
+            if msg.role == "user":
+                messages.append(HumanMessage(content=msg.content))
+            elif msg.role == "assistant":
+                messages.append(AIMessage(content=msg.content))
+
+        messages.append(HumanMessage(content=f"Follow-up question: {question}\nStandalone question:"))
+
+        try:
+            llm = ChatOpenAI(
+                model=self.settings.openai_model,
+                api_key=self.settings.openai_api_key,
+                temperature=0,
+            )
+            response = llm.invoke(messages)
+            standalone = response.content.strip() if isinstance(response.content, str) else str(response.content).strip()
+            if standalone:
+                logger.debug("Recontextualized query '%s' -> '%s'", question, standalone)
+                return standalone
+        except Exception as error:
+            logger.warning("Query recontextualization failed, falling back to original: %s", error)
+
+        return question
+
+    def _build_llm_messages(
+        self,
+        question: str,
+        context: str,
+        history: list[ChatMessage] | None,
+    ) -> list:
+        """Construct prompt messages including system instructions, prior dialogue, and grounded context."""
+        from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+
+        messages = [
+            SystemMessage(
+                content=(
+                    "You answer questions using only the supplied document context. "
+                    "If the context does not answer the question, say that clearly. "
+                    "Do not invent facts or citations. Keep the answer concise."
+                )
+            )
+        ]
+        if history:
+            for msg in history[-self.settings.max_history_messages:]:
+                if msg.role == "user":
+                    messages.append(HumanMessage(content=msg.content))
+                elif msg.role == "assistant":
+                    messages.append(AIMessage(content=msg.content))
+
+        messages.append(HumanMessage(content=f"Question: {question}\n\nDocument context:\n{context}"))
+        return messages
+
     def answer(
         self,
         question: str,
         user: dict[str, str] | None = None,
+        history: list[ChatMessage] | None = None,
+        session_id: str | None = None,
         hybrid_search: bool | None = None,
         query_expansion: bool | None = None,
     ) -> ChatResponse:
@@ -65,48 +136,132 @@ class RAGService:
         if not self.settings.openai_api_key:
             raise RuntimeError("OPENAI_API_KEY is not configured. Add it to your .env file.")
 
+        from app.core.session_store import SessionStore
+
+        resolved_history = list(history) if history else []
+        if session_id and not resolved_history:
+            resolved_history = SessionStore.get_history(session_id, max_messages=self.settings.max_history_messages)
+
+        search_query = self._recontextualize_query(question, resolved_history)
         chunks = self._retrieve(
-            question,
+            search_query,
             user=user,
             hybrid_search=hybrid_search,
             query_expansion=query_expansion,
         )
         if not chunks:
+            fallback_answer = "I could not find sufficiently relevant information in the uploaded documents."
+            if session_id:
+                SessionStore.add_turn(session_id, question, fallback_answer, max_messages=self.settings.max_history_messages)
             return ChatResponse(
-                answer="I could not find sufficiently relevant information in the uploaded documents.",
+                answer=fallback_answer,
                 sources=[],
+                session_id=session_id,
             )
 
-        from langchain_core.messages import HumanMessage, SystemMessage
         from langchain_openai import ChatOpenAI
 
         context = self._format_context(chunks)
+        messages = self._build_llm_messages(question, context, resolved_history)
         llm = ChatOpenAI(
             model=self.settings.openai_model,
             api_key=self.settings.openai_api_key,
             temperature=0,
         )
-        response = llm.invoke(
-            [
-                SystemMessage(
-                    content=(
-                        "You answer questions using only the supplied document context. "
-                        "If the context does not answer the question, say that clearly. "
-                        "Do not invent facts or citations. Keep the answer concise."
-                    )
-                ),
-                HumanMessage(content=f"Question: {question}\n\nDocument context:\n{context}"),
-            ]
-        )
+        response = llm.invoke(messages)
         answer = response.content if isinstance(response.content, str) else str(response.content)
+
+        if session_id:
+            SessionStore.add_turn(session_id, question, answer, max_messages=self.settings.max_history_messages)
+
         duration_ms = round((time.perf_counter() - start) * 1000, 1)
         logger.info(
-            "Answered in %.1fms with %d sources",
+            "Answered in %.1fms with %d sources (session=%s)",
             duration_ms,
             len(chunks),
-            extra={"duration_ms": duration_ms, "chunks": len(chunks)},
+            session_id,
+            extra={"duration_ms": duration_ms, "chunks": len(chunks), "session_id": session_id},
         )
-        return ChatResponse(answer=answer, sources=self._sources(chunks))
+        return ChatResponse(answer=answer, sources=self._sources(chunks), session_id=session_id)
+
+    def answer_stream(
+        self,
+        question: str,
+        user: dict[str, str] | None = None,
+        history: list[ChatMessage] | None = None,
+        session_id: str | None = None,
+        hybrid_search: bool | None = None,
+        query_expansion: bool | None = None,
+    ):
+        """Generator yielding SSE-formatted event objects for token-by-token streaming."""
+        from app.core.session_store import SessionStore
+        from app.models.schemas import (
+            StreamDoneEvent,
+            StreamErrorEvent,
+            StreamSourceEvent,
+            StreamTokenEvent,
+        )
+
+        if not self.settings.openai_api_key:
+            yield StreamErrorEvent(error="OPENAI_API_KEY is not configured. Add it to your .env file.")
+            return
+
+        resolved_history = list(history) if history else []
+        if session_id and not resolved_history:
+            resolved_history = SessionStore.get_history(session_id, max_messages=self.settings.max_history_messages)
+
+        search_query = self._recontextualize_query(question, resolved_history)
+        chunks = self._retrieve(
+            search_query,
+            user=user,
+            hybrid_search=hybrid_search,
+            query_expansion=query_expansion,
+        )
+
+        # 1. Send retrieved citation sources immediately
+        sources = self._sources(chunks)
+        yield StreamSourceEvent(sources=sources)
+
+        if not chunks:
+            fallback = "I could not find sufficiently relevant information in the uploaded documents."
+            yield StreamTokenEvent(token=fallback)
+            if session_id:
+                SessionStore.add_turn(session_id, question, fallback, max_messages=self.settings.max_history_messages)
+            yield StreamDoneEvent(done=True, total_tokens=1, session_id=session_id)
+            return
+
+        from langchain_openai import ChatOpenAI
+
+        context = self._format_context(chunks)
+        messages = self._build_llm_messages(question, context, resolved_history)
+        llm = ChatOpenAI(
+            model=self.settings.openai_model,
+            api_key=self.settings.openai_api_key,
+            temperature=0,
+            streaming=True,
+        )
+
+        collected_tokens: list[str] = []
+        try:
+            for chunk in llm.stream(messages):
+                token_text = chunk.content if isinstance(chunk.content, str) else str(chunk.content)
+                if token_text:
+                    collected_tokens.append(token_text)
+                    yield StreamTokenEvent(token=token_text)
+
+            full_answer = "".join(collected_tokens)
+            if session_id:
+                SessionStore.add_turn(session_id, question, full_answer, max_messages=self.settings.max_history_messages)
+
+            yield StreamDoneEvent(
+                done=True,
+                total_tokens=len(collected_tokens),
+                session_id=session_id,
+            )
+        except Exception as error:
+            logger.error("Streaming error: %s", error)
+            yield StreamErrorEvent(error=str(error))
+
 
     def _retrieve(
         self,

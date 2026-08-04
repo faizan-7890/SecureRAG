@@ -21,8 +21,15 @@ class TokenResponse(BaseModel):
     token_type: str = "bearer"
 
 
+class ChatMessage(BaseModel):
+    role: str = Field(pattern=r"^(user|assistant|system)$")
+    content: str = Field(min_length=1, max_length=10_000)
+
+
 class ChatRequest(BaseModel):
     question: str = Field(min_length=1, max_length=2_000)
+    history: list[ChatMessage] = Field(default_factory=list)
+    session_id: str | None = None
     hybrid_search: bool | None = None
     query_expansion: bool | None = None
 
@@ -38,3 +45,22 @@ class Source(BaseModel):
 class ChatResponse(BaseModel):
     answer: str
     sources: list[Source]
+    session_id: str | None = None
+
+
+class StreamSourceEvent(BaseModel):
+    sources: list[Source]
+
+
+class StreamTokenEvent(BaseModel):
+    token: str
+
+
+class StreamDoneEvent(BaseModel):
+    done: bool = True
+    total_tokens: int | None = None
+    session_id: str | None = None
+
+
+class StreamErrorEvent(BaseModel):
+    error: str

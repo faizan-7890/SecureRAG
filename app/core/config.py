@@ -23,7 +23,14 @@ class Settings(BaseSettings):
     app_name: str = "SecureRAG"
     environment: str = "development"
     openai_api_key: str | None = None
+    gemini_api_key: str | None = None
+    openai_base_url: str | None = None
     openai_model: str = "gpt-4o-mini"
+
+    @property
+    def effective_api_key(self) -> str | None:
+        """Return the configured OpenAI or Gemini API key."""
+        return self.openai_api_key or self.gemini_api_key
     chroma_path: Path = Field(default=PROJECT_ROOT / "chroma_db")
     upload_dir: Path = Field(default=PROJECT_ROOT / "data" / "uploads")
     chroma_collection: str = "securerag_documents"
@@ -45,6 +52,9 @@ class Settings(BaseSettings):
     rrf_k: int = Field(default=60, ge=1, le=200)
     query_expansion_count: int = Field(default=3, ge=1, le=5)
     bm25_index_path: Path | None = None
+    enable_streaming: bool = True
+    max_history_messages: int = Field(default=10, ge=1, le=50)
+    enable_query_recontextualization: bool = True
 
 
 @lru_cache
