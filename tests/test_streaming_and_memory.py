@@ -111,7 +111,7 @@ def test_answer_stream_without_api_key():
     events = list(service.answer_stream(question="Hello"))
     assert len(events) == 1
     assert isinstance(events[0], StreamErrorEvent)
-    assert "OPENAI_API_KEY is not configured" in events[0].error
+    assert "API key is not configured" in events[0].error
 
 
 def test_answer_stream_no_matching_chunks():

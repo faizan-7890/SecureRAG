@@ -128,8 +128,12 @@ def _headers() -> dict[str, str]:
     headers: dict[str, str] = {"Accept": "application/json"}
     if st.session_state.token:
         headers["Authorization"] = f"Bearer {st.session_state.token}"
-    if st.session_state.get("openai_api_key"):
-        headers["X-OpenAI-API-Key"] = st.session_state.openai_api_key.strip()
+    api_key = (st.session_state.get("openai_api_key") or "").strip()
+    if api_key:
+        if api_key.startswith("AIzaSy"):
+            headers["X-Gemini-API-Key"] = api_key
+        else:
+            headers["X-OpenAI-API-Key"] = api_key
     return headers
 
 
@@ -227,14 +231,14 @@ with st.sidebar:
     else:
         st.markdown('<span class="health-err">● Disconnected</span>', unsafe_allow_html=True)
 
-    openai_key_input = st.text_input(
-        "OpenAI API Key (Optional)",
+    llm_key_input = st.text_input(
+        "LLM API Key (OpenAI / Gemini)",
         value=st.session_state.openai_api_key,
         type="password",
-        placeholder="sk-... (or configure in .env)",
-        help="Optional: Override or supply your OpenAI API key directly without restarting the server.",
+        placeholder="sk-... or AIzaSy... (or set in .env)",
+        help="Optional: Supply your OpenAI or Google Gemini API key directly without restarting.",
     )
-    st.session_state.openai_api_key = openai_key_input
+    st.session_state.openai_api_key = llm_key_input
 
     st.divider()
 

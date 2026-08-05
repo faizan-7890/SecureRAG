@@ -27,6 +27,7 @@ def chat(
     request: ChatRequest,
     user: Annotated[dict[str, str] | None, Depends(current_user)] = None,
     x_openai_api_key: Annotated[str | None, Header(alias="X-OpenAI-API-Key")] = None,
+    x_gemini_api_key: Annotated[str | None, Header(alias="X-Gemini-API-Key")] = None,
 ) -> ChatResponse:
     from app.services.rag_service import RAGService
 
@@ -39,8 +40,13 @@ def chat(
     )
 
     settings = get_settings()
+    updates: dict[str, str] = {}
     if x_openai_api_key:
-        settings = settings.model_copy(update={"openai_api_key": x_openai_api_key})
+        updates["openai_api_key"] = x_openai_api_key
+    if x_gemini_api_key:
+        updates["gemini_api_key"] = x_gemini_api_key
+    if updates:
+        settings = settings.model_copy(update=updates)
 
     try:
         return RAGService(settings).answer(
@@ -64,6 +70,7 @@ def chat_stream(
     request: ChatRequest,
     user: Annotated[dict[str, str] | None, Depends(current_user)] = None,
     x_openai_api_key: Annotated[str | None, Header(alias="X-OpenAI-API-Key")] = None,
+    x_gemini_api_key: Annotated[str | None, Header(alias="X-Gemini-API-Key")] = None,
 ) -> StreamingResponse:
     """Stream token-by-token answer via Server-Sent Events (SSE)."""
     from app.services.rag_service import RAGService
@@ -77,8 +84,13 @@ def chat_stream(
     )
 
     settings = get_settings()
+    updates: dict[str, str] = {}
     if x_openai_api_key:
-        settings = settings.model_copy(update={"openai_api_key": x_openai_api_key})
+        updates["openai_api_key"] = x_openai_api_key
+    if x_gemini_api_key:
+        updates["gemini_api_key"] = x_gemini_api_key
+    if updates:
+        settings = settings.model_copy(update=updates)
 
     def event_generator():
         try:

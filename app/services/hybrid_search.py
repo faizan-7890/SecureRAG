@@ -283,19 +283,32 @@ class MultiQueryExpander:
     @staticmethod
     def expand(question: str, settings: Settings, count: int = 3) -> list[str]:
         """Generate variations of the query. Always includes original query first."""
-        if not settings.openai_api_key or count <= 1:
+        api_key = settings.effective_api_key
+        if not api_key or count <= 1:
             return [question]
 
         from langchain_core.messages import HumanMessage, SystemMessage
         from langchain_openai import ChatOpenAI
 
+        model = settings.openai_model
+        base_url = settings.openai_base_url
+
+        if api_key.startswith("AIzaSy") or "gemini" in model.lower() or bool(settings.gemini_api_key):
+            base_url = base_url or "https://generativelanguage.googleapis.com/v1beta/openai/"
+            if model == "gpt-4o-mini" or not model.startswith("gemini"):
+                model = "gemini-1.5-flash"
+
+        kwargs: dict[str, object] = {
+            "model": model,
+            "api_key": api_key,
+            "temperature": 0.2,
+            "max_tokens": 256,
+        }
+        if base_url:
+            kwargs["base_url"] = base_url
+
         try:
-            llm = ChatOpenAI(
-                model=settings.openai_model,
-                api_key=settings.openai_api_key,
-                temperature=0.2,
-                max_tokens=256,
-            )
+            llm = ChatOpenAI(**kwargs)
             response = llm.invoke(
                 [
                     SystemMessage(

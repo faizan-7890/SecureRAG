@@ -54,13 +54,38 @@ class RAGService:
         bm25_path = self.settings.bm25_index_path or (self.settings.chroma_path / "bm25_index.json")
         return BM25Index.load(bm25_path)
 
+    def _create_chat_model(self, streaming: bool = False, temperature: float = 0.0):
+        """Create a ChatOpenAI instance supporting OpenAI and Google Gemini via OpenAI-compatible endpoint."""
+        from langchain_openai import ChatOpenAI
+
+        api_key = self.settings.effective_api_key
+        model = self.settings.openai_model
+        base_url = self.settings.openai_base_url
+
+        # Auto-detect Google Gemini API key or model
+        if api_key and (api_key.startswith("AIzaSy") or "gemini" in model.lower() or bool(self.settings.gemini_api_key)):
+            base_url = base_url or "https://generativelanguage.googleapis.com/v1beta/openai/"
+            if model == "gpt-4o-mini" or not model.startswith("gemini"):
+                model = "gemini-1.5-flash"
+
+        kwargs: dict[str, object] = {
+            "model": model,
+            "api_key": api_key,
+            "temperature": temperature,
+        }
+        if base_url:
+            kwargs["base_url"] = base_url
+        if streaming:
+            kwargs["streaming"] = True
+
+        return ChatOpenAI(**kwargs)
+
     def _recontextualize_query(self, question: str, history: list[ChatMessage] | None) -> str:
         """Condense dialogue history and follow-up question into a standalone query."""
-        if not history or not self.settings.enable_query_recontextualization or not self.settings.openai_api_key:
+        if not history or not self.settings.enable_query_recontextualization or not self.settings.effective_api_key:
             return question
 
         from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
-        from langchain_openai import ChatOpenAI
 
         messages = [
             SystemMessage(
@@ -80,11 +105,7 @@ class RAGService:
         messages.append(HumanMessage(content=f"Follow-up question: {question}\nStandalone question:"))
 
         try:
-            llm = ChatOpenAI(
-                model=self.settings.openai_model,
-                api_key=self.settings.openai_api_key,
-                temperature=0,
-            )
+            llm = self._create_chat_model(temperature=0.0)
             response = llm.invoke(messages)
             standalone = response.content.strip() if isinstance(response.content, str) else str(response.content).strip()
             if standalone:
@@ -133,8 +154,8 @@ class RAGService:
         query_expansion: bool | None = None,
     ) -> ChatResponse:
         start = time.perf_counter()
-        if not self.settings.openai_api_key:
-            raise RuntimeError("OPENAI_API_KEY is not configured. Add it to your .env file.")
+        if not self.settings.effective_api_key:
+            raise RuntimeError("API key is not configured. Add OPENAI_API_KEY or GEMINI_API_KEY to your .env file.")
 
         from app.core.session_store import SessionStore
 
@@ -159,15 +180,9 @@ class RAGService:
                 session_id=session_id,
             )
 
-        from langchain_openai import ChatOpenAI
-
         context = self._format_context(chunks)
         messages = self._build_llm_messages(question, context, resolved_history)
-        llm = ChatOpenAI(
-            model=self.settings.openai_model,
-            api_key=self.settings.openai_api_key,
-            temperature=0,
-        )
+        llm = self._create_chat_model(temperature=0.0)
         response = llm.invoke(messages)
         answer = response.content if isinstance(response.content, str) else str(response.content)
 
@@ -202,8 +217,8 @@ class RAGService:
             StreamTokenEvent,
         )
 
-        if not self.settings.openai_api_key:
-            yield StreamErrorEvent(error="OPENAI_API_KEY is not configured. Add it to your .env file.")
+        if not self.settings.effective_api_key:
+            yield StreamErrorEvent(error="API key is not configured. Add OPENAI_API_KEY or GEMINI_API_KEY to your .env file.")
             return
 
         resolved_history = list(history) if history else []
@@ -230,16 +245,9 @@ class RAGService:
             yield StreamDoneEvent(done=True, total_tokens=1, session_id=session_id)
             return
 
-        from langchain_openai import ChatOpenAI
-
         context = self._format_context(chunks)
         messages = self._build_llm_messages(question, context, resolved_history)
-        llm = ChatOpenAI(
-            model=self.settings.openai_model,
-            api_key=self.settings.openai_api_key,
-            temperature=0,
-            streaming=True,
-        )
+        llm = self._create_chat_model(streaming=True, temperature=0.0)
 
         collected_tokens: list[str] = []
         try:
