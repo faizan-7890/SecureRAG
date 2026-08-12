@@ -55,8 +55,11 @@ class Settings(BaseSettings):
     enable_streaming: bool = True
     max_history_messages: int = Field(default=10, ge=1, le=50)
     enable_query_recontextualization: bool = True
+    rate_limit_global: str = "120/minute"
+    rate_limit_chat: str = "20/minute"
 
 
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
+

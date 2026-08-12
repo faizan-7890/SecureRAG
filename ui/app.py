@@ -311,12 +311,65 @@ with st.sidebar:
                 if resp and resp.status_code == 201:
                     data = resp.json()
                     st.success(f"✅ **{data['filename']}** ingested — {data['chunks']} chunks created.")
+                    st.rerun()
                 elif resp:
                     st.error(resp.json().get("detail", "Upload failed."))
 
     st.divider()
 
+    # ── Ingested Documents ──
+    st.markdown("### 📚 Documents")
+    docs_resp = _api("GET", "/documents")
+    if docs_resp and docs_resp.status_code == 200:
+        docs_data = docs_resp.json()
+        documents_list = docs_data.get("documents", [])
+        total = docs_data.get("total", 0)
+        if total == 0:
+            st.caption("No documents ingested yet.")
+        else:
+            st.caption(f"{total} document{'s' if total != 1 else ''} in knowledge base")
+            for doc in documents_list:
+                doc_id = doc.get("document_id", "")
+                filename = doc.get("filename", "Unknown")
+                chunks = doc.get("chunks", 0)
+                uploaded_at = doc.get("uploaded_at", "")
+                owner = doc.get("owner_id", "")
+                # Format timestamp
+                try:
+                    from datetime import datetime
+                    ts = datetime.fromisoformat(uploaded_at.replace("Z", "+00:00"))
+                    time_str = ts.strftime("%b %d, %Y %H:%M")
+                except Exception:
+                    time_str = uploaded_at[:16] if uploaded_at else "—"
+
+                col_name, col_del = st.columns([4, 1])
+                with col_name:
+                    st.markdown(
+                        f"<div style='font-size:0.83rem; color:#e2e8f0; font-weight:500; "
+                        f"overflow:hidden; text-overflow:ellipsis; white-space:nowrap; "
+                        f"max-width:170px; margin-bottom:1px;' title='{filename}'>📄 {filename}</div>"
+                        f"<div style='font-size:0.72rem; color:#64748b;'>{chunks} chunks · {time_str}</div>",
+                        unsafe_allow_html=True,
+                    )
+                with col_del:
+                    if st.button("🗑️", key=f"del_{doc_id}", help=f"Delete {filename}"):
+                        del_resp = _api("DELETE", f"/documents/{doc_id}")
+                        if del_resp and del_resp.status_code == 204:
+                            st.success(f"Deleted **{filename}**")
+                            st.rerun()
+                        elif del_resp:
+                            try:
+                                err = del_resp.json().get("detail", "Deletion failed.")
+                            except Exception:
+                                err = "Deletion failed."
+                            st.error(err)
+    elif docs_resp:
+        st.caption("Could not load documents.")
+
+    st.divider()
+
     # ── Search & Streaming Strategy ──
+
     st.markdown("### 🔀 Search & Generation")
     streaming_enabled = st.toggle(
         "Real-Time Token Streaming (SSE)",

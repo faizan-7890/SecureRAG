@@ -147,6 +147,65 @@ curl.exe -X POST "http://127.0.0.1:8000/chat" `
 }
 ```
 
+### List ingested documents
+
+```http
+GET /documents
+Authorization: Bearer <token>   # optional when auth is not configured
+```
+
+```json
+{
+  "documents": [
+    {
+      "document_id": "550e8400-e29b-41d4-a716-446655440000",
+      "filename": "policy.pdf",
+      "chunks": 42,
+      "uploaded_at": "2026-01-15T12:34:56+00:00",
+      "owner_id": "alice",
+      "file_extension": ".pdf",
+      "source_sha256": "abc123...",
+      "source_size_bytes": 204800
+    }
+  ],
+  "total": 1
+}
+```
+
+### Delete a document
+
+```http
+DELETE /documents/{document_id}
+Authorization: Bearer <token>
+```
+
+Removes all Chroma vector chunks, BM25 index entries, and the registry record for the document. Returns `204 No Content` on success. Admins can delete any document; regular users can only delete their own.
+
+### Retrieve session history
+
+```http
+GET /chat/history/{session_id}
+```
+
+```json
+{
+  "session_id": "my-session",
+  "messages": [
+    {"role": "user", "content": "What is the leave policy?"},
+    {"role": "assistant", "content": "Employees receive 20 days of annual leave."}
+  ],
+  "total": 2
+}
+```
+
+### Clear session history
+
+```http
+DELETE /chat/history/{session_id}
+```
+
+Clears the in-memory conversation history for the session. Returns `204 No Content`. Idempotent — succeeds even if the session does not exist.
+
 ### Ask a question (Real-Time SSE Streaming)
 
 ```http
@@ -201,6 +260,8 @@ data: {"done":true,"total_tokens":8,"session_id":"my-session"}
 | `SPARSE_WEIGHT` | `0.4` | Weight allocated to BM25 keyword score |
 | `MULTI_QUERY_COUNT` | `3` | Number of query variations generated during expansion |
 | `LOG_LEVEL` | `INFO` | Logging verbosity (`DEBUG`, `INFO`, `WARNING`, `ERROR`) |
+| `RATE_LIMIT_GLOBAL` | `120/minute` | Global request rate limit per IP address |
+| `RATE_LIMIT_CHAT` | `20/minute` | Rate limit applied to chat endpoints per IP address |
 
 ## Testing
 
@@ -242,6 +303,9 @@ All milestones are complete:
 - [x] Ragas evaluation with a golden dataset
 - [x] Hybrid Search (BM25 + Vector Reciprocal Rank Fusion) and Multi-Query Expansion
 - [x] Real-Time Streaming Responses (SSE) and Conversational Multi-Turn Memory
+- [x] Document Management API — list and delete ingested documents
+- [x] Session History HTTP endpoints — retrieve and clear conversation history
+- [x] Request rate limiting via `slowapi` (in-memory, IP-keyed)
 
 
 
