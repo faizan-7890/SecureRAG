@@ -11,6 +11,7 @@ from app.core.security import current_user
 from app.models.schemas import (
     ChatRequest,
     ChatResponse,
+    SessionHistoryResponse,
     StreamDoneEvent,
     StreamErrorEvent,
     StreamSourceEvent,
@@ -125,3 +126,35 @@ def chat_stream(
             "X-Accel-Buffering": "no",
         },
     )
+
+
+@router.get("/chat/history/{session_id}", response_model=SessionHistoryResponse)
+def get_session_history(
+    session_id: str,
+    user: Annotated[dict[str, str] | None, Depends(current_user)] = None,
+) -> SessionHistoryResponse:
+    """Retrieve the stored conversation history for a session.
+
+    Returns an empty message list if the session does not exist or has expired.
+    """
+    from app.core.session_store import SessionStore
+
+    messages = SessionStore.get_history(session_id, max_messages=1_000)
+    return SessionHistoryResponse(
+        session_id=session_id,
+        messages=messages,
+        total=len(messages),
+    )
+
+
+@router.delete("/chat/history/{session_id}", status_code=204)
+def clear_session_history(
+    session_id: str,
+    user: Annotated[dict[str, str] | None, Depends(current_user)] = None,
+) -> None:
+    """Clear the conversation history for a session."""
+    from app.core.session_store import SessionStore
+
+    SessionStore.clear(session_id)
+    logger.info("Session history cleared: %s", session_id, extra={"session_id": session_id})
+

@@ -37,7 +37,60 @@ class EmptyDocumentError(ValueError):
 class IngestionResult:
     filename: str
     chunks: int
+    document_id: str
+    uploaded_at: str
+    owner_id: str
+    file_extension: str
+    source_sha256: str
+    source_size_bytes: int
 
+
+class DocumentRegistry:
+    """In-memory registry of ingested documents.
+
+    Populated at ingest time and queried by the listing and deletion endpoints.
+    Follows the same module-level singleton pattern as UserStore and SessionStore.
+    """
+
+    _records: dict[str, "DocumentRecord"] = {}
+
+    @classmethod
+    def add(cls, result: "IngestionResult") -> None:
+        from app.models.schemas import DocumentRecord
+
+        cls._records[result.document_id] = DocumentRecord(
+            document_id=result.document_id,
+            filename=result.filename,
+            chunks=result.chunks,
+            uploaded_at=result.uploaded_at,
+            owner_id=result.owner_id,
+            file_extension=result.file_extension,
+            source_sha256=result.source_sha256,
+            source_size_bytes=result.source_size_bytes,
+        )
+
+    @classmethod
+    def get(cls, document_id: str) -> "DocumentRecord | None":
+        from app.models.schemas import DocumentRecord  # noqa: F401
+
+        return cls._records.get(document_id)
+
+    @classmethod
+    def all(cls, owner_id: str | None = None, role: str | None = None) -> list["DocumentRecord"]:
+        """Return all records visible to the given caller.
+
+        Admins see all records. Regular users see only their own and 'legacy' documents.
+        Unauthenticated callers (owner_id=None) see all records (auth not configured).
+        """
+        records = list(cls._records.values())
+        if owner_id is None or role == "admin":
+            return records
+        return [r for r in records if r.owner_id in {owner_id, "legacy"}]
+
+    @classmethod
+    def remove(cls, document_id: str) -> bool:
+        """Remove a record from the registry. Returns True if it existed."""
+        return cls._records.pop(document_id, None) is not None
 
 class DocumentIngestionService:
     def __init__(self, settings: Settings) -> None:
@@ -135,7 +188,19 @@ class DocumentIngestionService:
                 "duration_ms": duration_ms,
             },
         )
-        return IngestionResult(filename=original_filename, chunks=len(chunks))
+        result = IngestionResult(
+            filename=original_filename,
+            chunks=len(chunks),
+            document_id=document_id,
+            uploaded_at=uploaded_at,
+            owner_id=owner_id or "legacy",
+            file_extension=extension,
+            source_sha256=source_sha256,
+            source_size_bytes=source_size_bytes,
+        )
+        DocumentRegistry.add(result)
+        return result
+
 
     def _load_documents(
         self, file_path: Path, filename: str, extension: str

@@ -204,6 +204,24 @@ class BM25Index:
             logger.warning("Failed to load BM25 index from %s: %s", path, error)
         return index
 
+    def remove_document(self, document_id: str) -> int:
+        """Remove all BM25 entries that belong to the given document_id.
+
+        Returns the number of chunks removed.
+        """
+        before = len(self.documents)
+        self.documents = [
+            doc for doc in self.documents
+            if doc.get("metadata", {}).get("document_id") != document_id
+        ]
+        removed = before - len(self.documents)
+        if removed > 0:
+            self._recompute_stats()
+            logger.info("Removed %d BM25 entries for document %s", removed, document_id)
+        return removed
+
+
+
 
 def reciprocal_rank_fusion(
     dense_results: list[RetrievedChunk],

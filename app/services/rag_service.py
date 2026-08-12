@@ -382,3 +382,52 @@ class RAGService:
                     )
                 )
         return sources
+
+    def delete_document(self, document_id: str, user: dict[str, str] | None = None) -> bool:
+        """Delete all chunks for a document from Chroma and BM25, and remove from DocumentRegistry.
+
+        Returns True if the document existed and was deleted, False if not found.
+        Raises PermissionError when the caller lacks access.
+        """
+        from app.services.ingestion import DocumentRegistry
+
+        record = DocumentRegistry.get(document_id)
+        if record is None:
+            return False
+
+        # RBAC: only admins or the owner may delete
+        if user is not None:
+            if user.get("role") != "admin" and record.owner_id not in {user.get("username"), "legacy"}:
+                raise PermissionError("You do not have permission to delete this document.")
+
+        # 1. Remove from Chroma — find all chunk IDs with this document_id
+        vs = self._vector_store()
+        try:
+            results = vs.get(where={"document_id": document_id})
+            chunk_ids: list[str] = results.get("ids", [])
+        except Exception as error:
+            logger.warning("Could not query Chroma for document %s: %s", document_id, error)
+            chunk_ids = []
+
+        if chunk_ids:
+            try:
+                vs.delete(ids=chunk_ids)
+                logger.info("Deleted %d Chroma chunks for document %s", len(chunk_ids), document_id)
+            except Exception as error:
+                logger.error("Failed to delete Chroma chunks for document %s: %s", document_id, error)
+
+        # 2. Remove from BM25 sparse index
+        bm25_path = self.settings.bm25_index_path or (self.settings.chroma_path / "bm25_index.json")
+        try:
+            from app.services.hybrid_search import BM25Index
+            bm25 = BM25Index.load(bm25_path)
+            bm25.remove_document(document_id)
+            bm25.save(bm25_path)
+        except Exception as error:
+            logger.warning("BM25 index update failed for document %s: %s", document_id, error)
+
+        # 3. Remove from registry
+        DocumentRegistry.remove(document_id)
+        logger.info("Document %s deleted from registry", document_id)
+        return True
+

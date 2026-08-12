@@ -7,6 +7,26 @@ class UploadResponse(BaseModel):
     message: str
     filename: str
     chunks: int
+    document_id: str | None = None
+    owner_id: str | None = None
+
+
+class DocumentRecord(BaseModel):
+    """Metadata about a document that has been ingested into the vector store."""
+
+    document_id: str
+    filename: str
+    chunks: int
+    uploaded_at: str
+    owner_id: str
+    file_extension: str
+    source_sha256: str
+    source_size_bytes: int
+
+
+class DocumentListResponse(BaseModel):
+    documents: list[DocumentRecord]
+    total: int
 
 
 class RegisterRequest(BaseModel):
@@ -64,3 +84,9 @@ class StreamDoneEvent(BaseModel):
 
 class StreamErrorEvent(BaseModel):
     error: str
+
+
+class SessionHistoryResponse(BaseModel):
+    session_id: str
+    messages: list[ChatMessage]
+    total: int
