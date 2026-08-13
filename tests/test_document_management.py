@@ -1,5 +1,5 @@
-"""Tests for M12 — Document Management API (GET /documents, DELETE /documents/{id})
-and M13 — Session History API (GET /chat/history/{id}, DELETE /chat/history/{id}).
+"""Tests for M12 - Document Management API (GET /documents, DELETE /documents/{id})
+and M13 - Session History API (GET /chat/history/{id}, DELETE /chat/history/{id}).
 """
 
 from __future__ import annotations

@@ -7,4 +7,6 @@ chroma_db/
 data/uploads/
 .streamlit/
 eval/results/*.json
+.agents/
+scratch/
 

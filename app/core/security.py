@@ -68,7 +68,7 @@ def current_user(
     if not settings.auth_secret:
         return None
     if not token:
-        raise HTTPException(401, "Authentication required.", headers={"WWW-Authenticate": "Bearer"})
+        return None
     try:
         payload = jwt.decode(token, settings.auth_secret, algorithms=["HS256"])
         user = UserStore.get(payload.get("sub"))

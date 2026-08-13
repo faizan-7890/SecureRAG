@@ -7,7 +7,7 @@ from uuid import uuid4
 from typing import Annotated
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 
-from app.core.config import get_settings
+from app.core.config import Settings, get_settings
 from app.core.security import current_user
 from app.models.schemas import DocumentListResponse, UploadResponse
 
@@ -17,7 +17,11 @@ router = APIRouter(prefix="/documents", tags=["documents"])
 
 
 @router.post("/upload", response_model=UploadResponse, status_code=status.HTTP_201_CREATED)
-async def upload_document(file: UploadFile = File(...), user: Annotated[dict[str, str] | None, Depends(current_user)] = None) -> UploadResponse:
+async def upload_document(
+    file: UploadFile = File(...),
+    user: Annotated[dict[str, str] | None, Depends(current_user)] = None,
+    settings: Annotated[Settings, Depends(get_settings)] = None,
+) -> UploadResponse:
     from app.services.ingestion import (
         DocumentIngestionService,
         EmptyDocumentError,
@@ -26,8 +30,6 @@ async def upload_document(file: UploadFile = File(...), user: Annotated[dict[str
 
     if not file.filename:
         raise HTTPException(status_code=400, detail="A filename is required.")
-
-    settings = get_settings()
     original_filename = Path(file.filename).name
     extension = Path(original_filename).suffix.lower()
     if extension not in {".pdf", ".txt", ".md", ".markdown"}:
@@ -90,6 +92,7 @@ def list_documents(
 def delete_document(
     document_id: str,
     user: Annotated[dict[str, str] | None, Depends(current_user)] = None,
+    settings: Annotated[Settings, Depends(get_settings)] = None,
 ) -> None:
     """Delete a document and all its chunks from the vector store and BM25 index.
 
@@ -97,8 +100,6 @@ def delete_document(
     - Regular users can only delete documents they own.
     """
     from app.services.rag_service import RAGService
-
-    settings = get_settings()
     try:
         deleted = RAGService(settings).delete_document(document_id, user=user)
     except PermissionError as error:
