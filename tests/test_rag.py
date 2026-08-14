@@ -50,7 +50,7 @@ def test_retrieve_rbac_user_sees_own_and_legacy(monkeypatch):
     other_doc = _make_doc(owner_id="bob")
     store = FakeRetrievalStore([(own_doc, 0.9), (legacy_doc, 0.85), (other_doc, 0.8)])
 
-    settings = Settings(openai_api_key="k", top_k=10, retrieval_candidate_k=10, similarity_threshold=0.3, enable_hybrid_search=False)
+    settings = Settings(auth_secret="secret", openai_api_key="k", top_k=10, retrieval_candidate_k=10, similarity_threshold=0.3, enable_hybrid_search=False)
     service = RAGService(settings)
     monkeypatch.setattr(service, "_vector_store", lambda: store)
 
@@ -59,6 +59,38 @@ def test_retrieve_rbac_user_sees_own_and_legacy(monkeypatch):
     assert len(chunks) == 2
     owners = {c.document.metadata["owner_id"] for c in chunks}
     assert "bob" not in owners
+
+
+def test_retrieve_unauthenticated_only_sees_legacy_when_auth_configured(monkeypatch):
+    """Unauthenticated queries must only see legacy documents when auth is enabled."""
+    alice_doc = _make_doc(owner_id="alice")
+    bob_doc = _make_doc(owner_id="bob")
+    legacy_doc = _make_doc(owner_id="legacy")
+    store = FakeRetrievalStore([(alice_doc, 0.95), (bob_doc, 0.9), (legacy_doc, 0.85)])
+
+    settings = Settings(auth_secret="test-secret", openai_api_key="k", top_k=10, retrieval_candidate_k=10, similarity_threshold=0.3, enable_hybrid_search=False)
+    service = RAGService(settings)
+    monkeypatch.setattr(service, "_vector_store", lambda: store)
+
+    chunks = service._retrieve("test", user=None)
+    assert len(chunks) == 1
+    assert chunks[0].document.metadata["owner_id"] == "legacy"
+
+
+def test_retrieve_unauthenticated_sees_all_when_auth_not_configured(monkeypatch):
+    """When auth is disabled (AUTH_SECRET=None), unauthenticated queries can see all docs."""
+    alice_doc = _make_doc(owner_id="alice")
+    bob_doc = _make_doc(owner_id="bob")
+    legacy_doc = _make_doc(owner_id="legacy")
+    store = FakeRetrievalStore([(alice_doc, 0.95), (bob_doc, 0.9), (legacy_doc, 0.85)])
+
+    settings = Settings(auth_secret=None, openai_api_key="k", top_k=10, retrieval_candidate_k=10, similarity_threshold=0.3, enable_hybrid_search=False)
+    service = RAGService(settings)
+    monkeypatch.setattr(service, "_vector_store", lambda: store)
+
+    chunks = service._retrieve("test", user=None)
+    assert len(chunks) == 3
+
 
 
 def test_retrieve_respects_top_k(monkeypatch):
@@ -133,3 +165,35 @@ def test_answer_fallback_when_no_relevant_chunks(monkeypatch):
     result = service.answer("Anything?")
     assert "could not find" in result.answer.lower()
     assert result.sources == []
+
+
+# ---------------------------------------------------------------------------
+# Deletion & RBAC
+# ---------------------------------------------------------------------------
+
+def test_delete_document_rbac_unauthenticated_fails_when_auth_configured(tmp_path):
+    import pytest
+    from app.services.ingestion import DocumentRegistry, IngestionResult
+
+    doc_id = "test-doc-123"
+    DocumentRegistry._records[doc_id] = IngestionResult(
+        filename="test.txt",
+        chunks=1,
+        document_id=doc_id,
+        uploaded_at="2026-01-01T00:00:00Z",
+        owner_id="alice",
+        file_extension=".txt",
+        source_sha256="123",
+        source_size_bytes=10,
+    )
+
+    settings = Settings(
+        auth_secret="test-secret",
+        chroma_path=tmp_path / "chroma",
+        bm25_index_path=tmp_path / "bm25.json",
+    )
+    service = RAGService(settings)
+
+    with pytest.raises(PermissionError, match="Authentication is required"):
+        service.delete_document(doc_id, user=None)
+

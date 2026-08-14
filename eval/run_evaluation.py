@@ -141,14 +141,26 @@ def _run_ragas_evaluation(samples: list[dict]) -> dict:
 
     dataset = EvaluationDataset(samples=ragas_samples)
 
-    # Use the same OpenAI model configured in the project for judge calls.
-    evaluator_llm = LangchainLLMWrapper(
-        ChatOpenAI(
-            model=settings.openai_model,
-            api_key=settings.openai_api_key,
-            temperature=0,
-        )
-    )
+    # Use the configured model or Gemini for judge calls.
+    api_key = settings.effective_api_key
+    model = settings.openai_model
+    base_url = settings.openai_base_url
+
+    # Auto-detect Google Gemini API key or model
+    if api_key and (api_key.startswith("AIzaSy") or "gemini" in model.lower() or bool(settings.gemini_api_key)):
+        base_url = base_url or "https://generativelanguage.googleapis.com/v1beta/openai/"
+        if model == "gpt-4o-mini" or not model.startswith("gemini"):
+            model = "gemini-1.5-flash"
+
+    llm_kwargs: dict[str, object] = {
+        "model": model,
+        "api_key": api_key,
+        "temperature": 0,
+    }
+    if base_url:
+        llm_kwargs["base_url"] = base_url
+
+    evaluator_llm = LangchainLLMWrapper(ChatOpenAI(**llm_kwargs))
 
     metrics = [
         Faithfulness(llm=evaluator_llm),
@@ -257,14 +269,16 @@ def main() -> None:
 
     settings = get_settings()
 
-    if not settings.openai_api_key:
-        logger.error("OPENAI_API_KEY is required for evaluation. Set it in your .env file.")
+    if not settings.effective_api_key:
+        logger.error("An API key is required for evaluation. Set OPENAI_API_KEY or GEMINI_API_KEY in your .env file.")
         sys.exit(1)
 
     # Use a temporary Chroma directory so evaluation doesn't pollute production data.
-    tmp_dir = TemporaryDirectory(prefix="securerag_eval_")
+    tmp_dir = TemporaryDirectory(prefix="securerag_eval_", ignore_cleanup_errors=True)
     eval_settings = Settings(
         openai_api_key=settings.openai_api_key,
+        gemini_api_key=settings.gemini_api_key,
+        openai_base_url=settings.openai_base_url,
         openai_model=settings.openai_model,
         chroma_path=Path(tmp_dir.name) / "chroma_eval",
         chroma_collection="securerag_eval",
@@ -313,7 +327,10 @@ def main() -> None:
     _save_results(result, samples, duration)
 
     # Cleanup
-    tmp_dir.cleanup()
+    try:
+        tmp_dir.cleanup()
+    except Exception:
+        pass
     logger.info("Evaluation complete.")
 
 

@@ -101,6 +101,7 @@ class BM25Index:
         query: str,
         top_k: int = 10,
         user: dict[str, str] | None = None,
+        auth_enabled: bool = False,
     ) -> list[tuple[Document, float]]:
         """Search the index with BM25 scoring and RBAC owner filtering."""
         from langchain_core.documents import Document
@@ -112,15 +113,21 @@ class BM25Index:
         if not query_tokens:
             return []
 
+        if auth_enabled and user is None:
+            allowed_owners: set[str] | None = {"legacy"}
+        elif user and user.get("role") != "admin":
+            allowed_owners = {user.get("username"), "legacy"}
+        else:
+            allowed_owners = None
+
         scores: list[tuple[int, float]] = []
 
         for idx, doc in enumerate(self.documents):
             # Check RBAC access
-            metadata = doc["metadata"]
-            if user and user.get("role") != "admin":
-                owner_id = metadata.get("owner_id", "legacy")
-                if owner_id not in {user.get("username"), "legacy"}:
-                    continue
+            metadata = doc.get("metadata") or {}
+            owner_id = metadata.get("owner_id") or "legacy"
+            if allowed_owners is not None and owner_id not in allowed_owners:
+                continue
 
             # Calculate BM25 score
             doc_tokens = doc["tokens"]

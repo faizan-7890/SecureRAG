@@ -97,6 +97,16 @@ def test_bm25_rbac_filtering() -> None:
     legacy_results = index.search("holiday schedule", user=bob_user)
     assert len(legacy_results) == 1
 
+    # Anonymous user with auth_enabled=True only sees legacy documents
+    anon_auth_results = index.search("financial report", user=None, auth_enabled=True)
+    assert len(anon_auth_results) == 0
+    anon_legacy_results = index.search("holiday schedule", user=None, auth_enabled=True)
+    assert len(anon_legacy_results) == 1
+
+    # Anonymous user with auth_enabled=False (no auth configured) sees all documents
+    anon_noauth_results = index.search("financial report", user=None, auth_enabled=False)
+    assert len(anon_noauth_results) == 1
+
 
 def test_bm25_save_and_load(tmp_path: Path) -> None:
     index_file = tmp_path / "bm25_index.json"

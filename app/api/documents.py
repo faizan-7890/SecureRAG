@@ -8,7 +8,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 
 from app.core.config import Settings, get_settings
-from app.core.security import current_user
+from app.core.security import current_user, require_current_user
 from app.models.schemas import DocumentListResponse, UploadResponse
 
 logger = logging.getLogger(__name__)
@@ -73,31 +73,34 @@ async def upload_document(
 @router.get("", response_model=DocumentListResponse)
 def list_documents(
     user: Annotated[dict[str, str] | None, Depends(current_user)] = None,
+    settings: Annotated[Settings, Depends(get_settings)] = None,
 ) -> DocumentListResponse:
     """List all ingested documents visible to the authenticated caller.
 
     - Admins see every document.
     - Regular users see only their own documents and 'legacy' (unauthenticated) uploads.
-    - Unauthenticated callers (auth not configured) see all documents.
+    - Unauthenticated callers see only 'legacy' documents when auth is enabled, or all documents if auth is not configured.
     """
     from app.services.ingestion import DocumentRegistry
 
     owner_id = user.get("username") if user else None
     role = user.get("role") if user else None
-    records = DocumentRegistry.all(owner_id=owner_id, role=role)
+    auth_enabled = bool(settings and settings.auth_secret)
+    records = DocumentRegistry.all(owner_id=owner_id, role=role, auth_enabled=auth_enabled)
     return DocumentListResponse(documents=records, total=len(records))
 
 
 @router.delete("/{document_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_document(
     document_id: str,
-    user: Annotated[dict[str, str] | None, Depends(current_user)] = None,
+    user: Annotated[dict[str, str] | None, Depends(require_current_user)] = None,
     settings: Annotated[Settings, Depends(get_settings)] = None,
 ) -> None:
     """Delete a document and all its chunks from the vector store and BM25 index.
 
     - Admins can delete any document.
-    - Regular users can only delete documents they own.
+    - Regular users can only delete documents they own or legacy documents.
+    - Unauthenticated deletion is rejected when auth is configured.
     """
     from app.services.rag_service import RAGService
     try:

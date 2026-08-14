@@ -77,3 +77,22 @@ def current_user(
     if not user:
         raise HTTPException(401, "User not found.")
     return user
+
+
+def require_current_user(
+    user: Annotated[dict[str, str] | None, Depends(current_user)],
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> dict[str, str] | None:
+    """Enforce authentication when AUTH_SECRET is configured.
+
+    If auth is not configured (AUTH_SECRET=None), returns None (allows unauthenticated access).
+    If auth is configured and the caller is unauthenticated, raises HTTP 401.
+    """
+    if settings.auth_secret and user is None:
+        raise HTTPException(
+            status_code=401,
+            detail="Authentication is required.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return user
+

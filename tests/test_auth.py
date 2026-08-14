@@ -57,3 +57,45 @@ def test_register_rejects_short_username(auth_client):
 def test_register_rejects_short_password(auth_client):
     resp = auth_client.post("/auth/register", json={"username": "validuser", "password": "short"})
     assert resp.status_code == 422
+
+
+def test_register_bootstrap_admin_rejected(tmp_path):
+    """Attempting to register the bootstrap admin username must be rejected with 400."""
+    settings = Settings(
+        auth_secret="test-secret",
+        auth_bootstrap_admin="admin",
+        auth_bootstrap_password="AdminPassword123!",
+        upload_dir=tmp_path / "uploads",
+        chroma_path=tmp_path / "chroma",
+    )
+    app.dependency_overrides[get_settings] = lambda: settings
+
+    try:
+        client = TestClient(app)
+        resp = client.post("/auth/register", json={"username": "admin", "password": "AttackerPassword123!"})
+        assert resp.status_code == 400
+        assert "reserved" in resp.json()["detail"].lower()
+    finally:
+        app.dependency_overrides.pop(get_settings, None)
+
+
+def test_bootstrap_admin_login_success(tmp_path):
+    """Bootstrap admin can log in with configured bootstrap credentials and receive admin token."""
+    settings = Settings(
+        auth_secret="test-secret",
+        auth_bootstrap_admin="admin",
+        auth_bootstrap_password="AdminPassword123!",
+        upload_dir=tmp_path / "uploads",
+        chroma_path=tmp_path / "chroma",
+    )
+    app.dependency_overrides[get_settings] = lambda: settings
+
+    try:
+        client = TestClient(app)
+        resp = client.post("/auth/login", json={"username": "admin", "password": "AdminPassword123!"})
+        assert resp.status_code == 200
+        body = resp.json()
+        assert "access_token" in body
+    finally:
+        app.dependency_overrides.pop(get_settings, None)
+

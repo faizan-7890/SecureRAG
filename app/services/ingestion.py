@@ -76,16 +76,24 @@ class DocumentRegistry:
         return cls._records.get(document_id)
 
     @classmethod
-    def all(cls, owner_id: str | None = None, role: str | None = None) -> list["DocumentRecord"]:
+    def all(
+        cls,
+        owner_id: str | None = None,
+        role: str | None = None,
+        auth_enabled: bool = False,
+    ) -> list["DocumentRecord"]:
         """Return all records visible to the given caller.
 
-        Admins see all records. Regular users see only their own and 'legacy' documents.
-        Unauthenticated callers (owner_id=None) see all records (auth not configured).
+        - If role is 'admin' or auth is disabled: all documents are visible.
+        - If authenticated regular user: user's own documents and 'legacy' documents are visible.
+        - If unauthenticated and auth is enabled: only 'legacy' documents are visible.
         """
         records = list(cls._records.values())
-        if owner_id is None or role == "admin":
+        if role == "admin" or (not auth_enabled and owner_id is None):
             return records
-        return [r for r in records if r.owner_id in {owner_id, "legacy"}]
+        if owner_id:
+            return [r for r in records if r.owner_id in {owner_id, "legacy"}]
+        return [r for r in records if r.owner_id == "legacy"]
 
     @classmethod
     def remove(cls, document_id: str) -> bool:

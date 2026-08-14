@@ -15,6 +15,9 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 def register(request: RegisterRequest, settings: Settings = Depends(get_settings)):
     if not settings.auth_secret:
         raise HTTPException(503, "Authentication is not configured.")
+    if settings.auth_bootstrap_admin and request.username.strip().lower() == settings.auth_bootstrap_admin.strip().lower():
+        logger.warning("Registration rejected: reserved bootstrap admin username %s", request.username, extra={"username": request.username})
+        raise HTTPException(400, "This username is reserved for system administration.")
     if UserStore.get(request.username):
         logger.warning("Registration rejected: duplicate username %s", request.username, extra={"username": request.username})
         raise HTTPException(409, "Username is already registered.")

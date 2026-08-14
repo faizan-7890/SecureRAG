@@ -69,7 +69,7 @@ class TestListDocuments:
 
     def test_lists_multiple_documents(self, auth_client):
         for i in range(3):
-            DocumentRegistry.add(_make_result(filename=f"doc{i}.txt", document_id=str(uuid4())))
+            DocumentRegistry.add(_make_result(filename=f"doc{i}.txt", document_id=str(uuid4()), owner_id="legacy"))
 
         resp = auth_client.get("/documents")
         assert resp.status_code == 200
@@ -87,6 +87,62 @@ class TestListDocuments:
         docs = resp.json()["documents"]
         owners = {d["owner_id"] for d in docs}
         assert "other_user" not in owners
+        assert username in owners
+        assert "legacy" in owners
+
+    def test_unauthenticated_user_only_sees_legacy_docs_when_auth_enabled(self, auth_client):
+        DocumentRegistry.add(_make_result(owner_id="alice", document_id=str(uuid4())))
+        DocumentRegistry.add(_make_result(owner_id="bob", document_id=str(uuid4())))
+        DocumentRegistry.add(_make_result(owner_id="legacy", document_id=str(uuid4())))
+
+        resp = auth_client.get("/documents")
+        assert resp.status_code == 200
+        docs = resp.json()["documents"]
+        assert len(docs) == 1
+        assert docs[0]["owner_id"] == "legacy"
+
+    def test_unauthenticated_user_sees_all_docs_when_auth_disabled(self, tmp_path):
+        settings = Settings(
+            auth_secret=None,
+            upload_dir=tmp_path / "uploads",
+            chroma_path=tmp_path / "chroma",
+        )
+        app.dependency_overrides[get_settings] = lambda: settings
+        try:
+            client = TestClient(app)
+            DocumentRegistry.add(_make_result(owner_id="alice", document_id=str(uuid4())))
+            DocumentRegistry.add(_make_result(owner_id="bob", document_id=str(uuid4())))
+            DocumentRegistry.add(_make_result(owner_id="legacy", document_id=str(uuid4())))
+
+            resp = client.get("/documents")
+            assert resp.status_code == 200
+            assert resp.json()["total"] == 3
+        finally:
+            app.dependency_overrides.pop(get_settings, None)
+
+    def test_admin_user_sees_all_documents(self, test_settings):
+        from app.core.security import UserStore, create_access_token, _hash_password
+
+        UserStore.users["admin_list_test"] = {
+            "username": "admin_list_test",
+            "password": _hash_password("adminpassword"),
+            "role": "admin",
+        }
+        admin_token = create_access_token(UserStore.users["admin_list_test"], test_settings)
+
+        DocumentRegistry.add(_make_result(owner_id="alice", document_id=str(uuid4())))
+        DocumentRegistry.add(_make_result(owner_id="bob", document_id=str(uuid4())))
+        DocumentRegistry.add(_make_result(owner_id="legacy", document_id=str(uuid4())))
+
+        app.dependency_overrides[get_settings] = lambda: test_settings
+        client = TestClient(app)
+        try:
+            resp = client.get("/documents", headers={"Authorization": f"Bearer {admin_token}"})
+            assert resp.status_code == 200
+            assert resp.json()["total"] == 3
+        finally:
+            app.dependency_overrides.pop(get_settings, None)
+            UserStore.users.pop("admin_list_test", None)
 
 
 # ---------------------------------------------------------------------------
@@ -94,12 +150,22 @@ class TestListDocuments:
 # ---------------------------------------------------------------------------
 
 class TestDeleteDocument:
-    def test_delete_nonexistent_returns_404(self, auth_client):
-        resp = auth_client.delete("/documents/nonexistent-id")
+    def test_delete_nonexistent_returns_404(self, auth_client, registered_user):
+        _, _, token = registered_user
+        resp = auth_client.delete("/documents/nonexistent-id", headers={"Authorization": f"Bearer {token}"})
         assert resp.status_code == 404
 
-    def test_delete_existing_document(self, auth_client):
-        result = _make_result(filename="remove_me.txt", owner_id="legacy")
+    def test_unauthenticated_delete_rejected_when_auth_enabled(self, auth_client):
+        result = _make_result(filename="secret.txt", owner_id="alice")
+        DocumentRegistry.add(result)
+
+        resp = auth_client.delete(f"/documents/{result.document_id}")
+        assert resp.status_code in {401, 403}
+        assert DocumentRegistry.get(result.document_id) is not None
+
+    def test_delete_existing_document(self, auth_client, registered_user):
+        username, _, token = registered_user
+        result = _make_result(filename="remove_me.txt", owner_id=username)
         DocumentRegistry.add(result)
         assert DocumentRegistry.get(result.document_id) is not None
 
@@ -108,7 +174,10 @@ class TestDeleteDocument:
             patch("app.services.rag_service.RAGService._bm25_index"),
         ):
             mock_vs.return_value.get.return_value = {"ids": []}
-            resp = auth_client.delete(f"/documents/{result.document_id}")
+            resp = auth_client.delete(
+                f"/documents/{result.document_id}",
+                headers={"Authorization": f"Bearer {token}"},
+            )
 
         assert resp.status_code == 204
         assert DocumentRegistry.get(result.document_id) is None
@@ -153,6 +222,30 @@ class TestDeleteDocument:
         finally:
             app.dependency_overrides.pop(get_settings, None)
             UserStore.users.pop("admin_test", None)
+
+    def test_delete_when_auth_disabled_succeeds(self, tmp_path):
+        settings = Settings(
+            auth_secret=None,
+            upload_dir=tmp_path / "uploads",
+            chroma_path=tmp_path / "chroma",
+        )
+        app.dependency_overrides[get_settings] = lambda: settings
+        try:
+            client = TestClient(app)
+            result = _make_result(filename="unauth.txt", owner_id="legacy")
+            DocumentRegistry.add(result)
+
+            with (
+                patch("app.services.rag_service.RAGService._vector_store") as mock_vs,
+                patch("app.services.rag_service.RAGService._bm25_index"),
+            ):
+                mock_vs.return_value.get.return_value = {"ids": []}
+                resp = client.delete(f"/documents/{result.document_id}")
+            assert resp.status_code == 204
+            assert DocumentRegistry.get(result.document_id) is None
+        finally:
+            app.dependency_overrides.pop(get_settings, None)
+
 
 
 # ---------------------------------------------------------------------------

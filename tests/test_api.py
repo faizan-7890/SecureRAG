@@ -44,7 +44,11 @@ def test_chat_rejects_blank_question() -> None:
 
 
 def test_uploads_chunks_and_enriches_text_document(monkeypatch, tmp_path) -> None:
-    settings = Settings(upload_dir=tmp_path / "uploads")
+    settings = Settings(
+        upload_dir=tmp_path / "uploads",
+        chroma_path=tmp_path / "chroma",
+        bm25_index_path=tmp_path / "chroma" / "bm25_index.json",
+    )
     app.dependency_overrides[get_settings] = lambda: settings
     vector_store = FakeVectorStore()
     monkeypatch.setattr(

@@ -288,6 +288,13 @@ class RAGService:
         else:
             queries = [question]
 
+        if self.settings.auth_secret and user is None:
+            allowed_owners: set[str] | None = {"legacy"}
+        elif user and user.get("role") != "admin":
+            allowed_owners = {user.get("username"), "legacy"}
+        else:
+            allowed_owners = None
+
         all_candidates: dict[str, RetrievedChunk] = {}
 
         for q in queries:
@@ -299,11 +306,20 @@ class RAGService:
                 dense_chunks = [
                     RetrievedChunk(document=doc, relevance_score=score)
                     for doc, score in dense_raw
-                    if score >= self.settings.similarity_threshold and (user is None or user.get("role") == "admin" or getattr(doc, "metadata", {}).get("owner_id") in {user.get("username"), "legacy"})
+                    if score >= self.settings.similarity_threshold
+                    and (
+                        allowed_owners is None
+                        or (getattr(doc, "metadata", {}) or {}).get("owner_id", "legacy") in allowed_owners
+                    )
                 ]
 
                 # 2. Sparse BM25 retrieval
-                sparse_results = self._bm25_index().search(q, top_k=candidate_k, user=user)
+                sparse_results = self._bm25_index().search(
+                    q,
+                    top_k=candidate_k,
+                    user=user,
+                    auth_enabled=bool(self.settings.auth_secret),
+                )
 
                 # 3. Fuse dense and sparse results
                 fused = reciprocal_rank_fusion(
@@ -318,7 +334,11 @@ class RAGService:
                 fused = [
                     RetrievedChunk(document=document, relevance_score=score)
                     for document, score in results
-                    if score >= self.settings.similarity_threshold and (user is None or user.get("role") == "admin" or getattr(document, "metadata", {}).get("owner_id") in {user.get("username"), "legacy"})
+                    if score >= self.settings.similarity_threshold
+                    and (
+                        allowed_owners is None
+                        or (getattr(document, "metadata", {}) or {}).get("owner_id", "legacy") in allowed_owners
+                    )
                 ]
 
             for chunk in fused:
@@ -396,9 +416,15 @@ class RAGService:
             return False
 
         # RBAC: only admins or the owner may delete
-        if user is not None:
+        if self.settings.auth_secret:
+            if not user:
+                raise PermissionError("Authentication is required to delete documents.")
             if user.get("role") != "admin" and record.owner_id not in {user.get("username"), "legacy"}:
                 raise PermissionError("You do not have permission to delete this document.")
+        else:
+            if user is not None:
+                if user.get("role") != "admin" and record.owner_id not in {user.get("username"), "legacy"}:
+                    raise PermissionError("You do not have permission to delete this document.")
 
         # 1. Remove from Chroma — find all chunk IDs with this document_id
         vs = self._vector_store()
