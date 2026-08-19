@@ -38,6 +38,17 @@ class UserStore:
     def get(cls, username: str | None) -> dict[str, str] | None:
         return cls.users.get(username) if username else None
 
+    @classmethod
+    def all(cls) -> list[dict[str, str]]:
+        return list(cls.users.values())
+
+    @classmethod
+    def update_role(cls, username: str, role: str) -> bool:
+        if username in cls.users:
+            cls.users[username]["role"] = role
+            return True
+        return False
+
 
 def authenticate(username: str, password: str, settings: Settings):
     if (
