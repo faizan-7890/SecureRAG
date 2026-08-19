@@ -36,9 +36,40 @@ class RegisterRequest(BaseModel):
 class LoginRequest(RegisterRequest):
     pass
 
+
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
+
+
+class UserProfile(BaseModel):
+    username: str
+    role: str
+
+
+class UserListResponse(BaseModel):
+    users: list[UserProfile]
+    total: int
+
+
+class UpdateRoleRequest(BaseModel):
+    role: str = Field(pattern=r"^(admin|user|manager)$")
+
+
+class ChunkDetail(BaseModel):
+    chunk_id: str
+    chunk_index: int
+    content: str
+    page: int | None = None
+    allowed_roles: str | None = None
+    owner_id: str | None = None
+
+
+class DocumentChunksResponse(BaseModel):
+    document_id: str
+    filename: str
+    total_chunks: int
+    chunks: list[ChunkDetail]
 
 
 class ChatMessage(BaseModel):
