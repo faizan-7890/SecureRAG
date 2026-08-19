@@ -21,6 +21,7 @@
 | 6 | Full Test Suite Execution | Unit & integration tests in `tests/`, fixing broken tests/mocks | M3 | ORIGINAL_REQUEST §R3 |
 | 7 | Ragas Evaluation Pipeline | `eval/run_evaluation.py` evaluation execution with harness/metrics | M4 | ORIGINAL_REQUEST §R3 |
 | 8 | Comprehensive Audit Report | Detailed report on tests, security, pipeline health, Ragas scores | M4 | ORIGINAL_REQUEST §R4 |
+| 9 | UI Console & Chunk Inspector | Modern Streamlit UI with multi-tab workspace, RBAC admin & chunk viewer | M5 | EXTENSION |
 
 ## Milestones
 | # | Name | Scope | Dependencies | Status |
