@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 
 from app.core.config import Settings, get_settings
 from app.core.security import current_user, require_current_user
-from app.models.schemas import DocumentListResponse, UploadResponse
+from app.models.schemas import ChunkDetail, DocumentChunksResponse, DocumentListResponse, UploadResponse
 
 logger = logging.getLogger(__name__)
 
@@ -113,4 +113,63 @@ def delete_document(
 
     if not deleted:
         raise HTTPException(status_code=404, detail=f"Document '{document_id}' not found.")
+
+
+@router.get("/{document_id}/chunks", response_model=DocumentChunksResponse)
+def get_document_chunks(
+    document_id: str,
+    user: Annotated[dict[str, str] | None, Depends(current_user)] = None,
+    settings: Annotated[Settings, Depends(get_settings)] = None,
+) -> DocumentChunksResponse:
+    """Retrieve all chunk text and metadata for a specific document with RBAC validation."""
+    from app.services.ingestion import DocumentRegistry
+    from app.services.rag_service import RAGService
+
+    doc = DocumentRegistry.get(document_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail=f"Document '{document_id}' not found.")
+
+    # RBAC validation: admin or owner or legacy (when auth disabled)
+    auth_enabled = bool(settings and settings.auth_secret)
+    if auth_enabled:
+        if not user:
+            if doc.owner_id != "legacy":
+                raise HTTPException(status_code=401, detail="Authentication required to view document chunks.")
+        elif user.get("role") != "admin" and doc.owner_id not in {user.get("username"), "legacy"}:
+            raise HTTPException(status_code=403, detail="You do not have permission to view chunks for this document.")
+
+    # Retrieve chunks from Chroma
+    try:
+        rag = RAGService(settings)
+        vector_store = rag._vector_store()
+        results = vector_store.get(where={"document_id": document_id}, include=["documents", "metadatas"])
+        chunks: list[ChunkDetail] = []
+        if results and results.get("documents"):
+            doc_texts = results["documents"]
+            metadatas = results.get("metadatas", [])
+            ids = results.get("ids", [])
+            for idx, text in enumerate(doc_texts):
+                meta = metadatas[idx] if idx < len(metadatas) else {}
+                chunk_id = ids[idx] if idx < len(ids) else f"{document_id}:{idx}"
+                chunks.append(
+                    ChunkDetail(
+                        chunk_id=chunk_id,
+                        chunk_index=meta.get("chunk_index", idx),
+                        content=text,
+                        page=meta.get("page"),
+                        allowed_roles=meta.get("allowed_roles"),
+                        owner_id=meta.get("owner_id"),
+                    )
+                )
+            chunks.sort(key=lambda c: c.chunk_index)
+        return DocumentChunksResponse(
+            document_id=document_id,
+            filename=doc.filename,
+            total_chunks=len(chunks),
+            chunks=chunks,
+        )
+    except Exception as error:
+        logger.exception("Failed to retrieve chunks for document %s: %s", document_id, error)
+        raise HTTPException(status_code=500, detail="Failed to retrieve document chunks.") from error
+
 
