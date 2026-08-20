@@ -9,4 +9,6 @@ data/uploads/
 eval/results/*.json
 .agents/
 scratch/
+frontend/node_modules/
+frontend/dist/
 
