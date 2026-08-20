@@ -89,13 +89,23 @@ uvicorn app.main:app --reload
 
 Open [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs) to use Swagger UI.
 
-### 5. Launch the Streamlit UI
+### 5. Launch the React Web Frontend (Powered by Bun)
+
+```powershell
+cd frontend
+bun install
+bun run dev
+```
+
+Open [http://localhost:5173](http://localhost:5173) to use the modern React SPA with real-time SSE streaming, interactive chunk inspector, RBAC console, and benchmark scorecards.
+
+### 6. (Alternative) Launch the Streamlit UI
 
 ```powershell
 streamlit run ui/app.py
 ```
 
-Open [http://localhost:8501](http://localhost:8501) to use the chat interface.
+Open [http://localhost:8501](http://localhost:8501) to use the Python Streamlit chat interface.
 
 ## API reference
 
