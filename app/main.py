@@ -3,6 +3,7 @@ import time
 from uuid import uuid4
 
 from fastapi import FastAPI, Request, Response
+from fastapi.middleware.cors import CORSMiddleware
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
@@ -32,6 +33,18 @@ app = FastAPI(
     title=settings.app_name,
     version="0.1.0",
     description="A production-style retrieval-augmented generation API.",
+)
+
+# ---------------------------------------------------------------------------
+# CORS Middleware — Allows React frontend on localhost:5173 / Bun
+# ---------------------------------------------------------------------------
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 app.state.limiter = limiter
