@@ -26,15 +26,16 @@ export const App: React.FC = () => {
   // Settings State
   const [settings, setSettings] = useState<RuntimeSettings>(() => {
     const saved = localStorage.getItem('securerag_settings');
-    return saved
-      ? JSON.parse(saved)
-      : {
-          apiUrl: 'http://127.0.0.1:8000',
-          apiKey: '',
-          streaming: true,
-          hybridSearch: true,
-          queryExpansion: false,
-        };
+    const parsed = saved ? JSON.parse(saved) : {};
+    return {
+      apiUrl: parsed.apiUrl || 'http://127.0.0.1:8000',
+      apiKey: parsed.apiKey || '',
+      streaming: parsed.streaming !== undefined ? parsed.streaming : true,
+      hybridSearch: parsed.hybridSearch !== undefined ? parsed.hybridSearch : true,
+      queryExpansion: parsed.queryExpansion !== undefined ? parsed.queryExpansion : false,
+      enableReranker: parsed.enableReranker !== undefined ? parsed.enableReranker : true,
+      enableSemanticCache: parsed.enableSemanticCache !== undefined ? parsed.enableSemanticCache : true,
+    };
   });
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 

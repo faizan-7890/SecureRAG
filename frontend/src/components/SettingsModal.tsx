@@ -113,6 +113,32 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 className="h-4 w-4 rounded accent-indigo-600"
               />
             </div>
+
+            <div className="flex items-center justify-between p-3 rounded-xl bg-slate-950 border border-slate-850">
+              <div>
+                <div className="font-semibold text-slate-200">Two-Stage Cross-Encoder Reranker</div>
+                <div className="text-[11px] text-slate-400">Deep cross-attention scoring (ms-marco-MiniLM-L-6-v2).</div>
+              </div>
+              <input
+                type="checkbox"
+                checked={settings.enableReranker}
+                onChange={(e) => onUpdateSettings({ ...settings, enableReranker: e.target.checked })}
+                className="h-4 w-4 rounded accent-indigo-600"
+              />
+            </div>
+
+            <div className="flex items-center justify-between p-3 rounded-xl bg-slate-950 border border-slate-850">
+              <div>
+                <div className="font-semibold text-slate-200">Semantic Response Cache</div>
+                <div className="text-[11px] text-slate-400">Sub-10ms instant response cache on high similarity (≥0.96).</div>
+              </div>
+              <input
+                type="checkbox"
+                checked={settings.enableSemanticCache}
+                onChange={(e) => onUpdateSettings({ ...settings, enableSemanticCache: e.target.checked })}
+                className="h-4 w-4 rounded accent-indigo-600"
+              />
+            </div>
           </div>
 
           {/* Model Topology */}
@@ -124,6 +150,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             <div>• <b>Embeddings:</b> <code>sentence-transformers/all-MiniLM-L6-v2</code> (384-d, CPU)</div>
             <div>• <b>Dense Vector Store:</b> Chroma DB Persistence</div>
             <div>• <b>Sparse Lexical Index:</b> Okapi BM25 with JSON stats</div>
+            <div>• <b>Reranker:</b> <code>cross-encoder/ms-marco-MiniLM-L-6-v2</code></div>
+            <div>• <b>Semantic Cache:</b> In-memory + Disk JSON (threshold: 0.96)</div>
             <div>• <b>Rank Fusion:</b> Reciprocal Rank Fusion (k=60, dense:0.6, sparse:0.4)</div>
           </div>
         </div>
