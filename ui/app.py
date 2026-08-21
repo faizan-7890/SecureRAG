@@ -368,6 +368,16 @@ with st.sidebar:
         value=False,
         help="Generate sub-queries to broaden search context on complex questions.",
     )
+    reranker_enabled = st.toggle(
+        "Two-Stage Cross-Encoder Reranker",
+        value=True,
+        help="Deep cross-attention scoring on candidates using ms-marco-MiniLM-L-6-v2.",
+    )
+    semantic_cache_enabled = st.toggle(
+        "Semantic Response Cache",
+        value=True,
+        help="Sub-10ms instant response cache on high similarity (>=0.96).",
+    )
 
     st.divider()
 
@@ -480,6 +490,8 @@ with tab_chat:
             "session_id": st.session_state.get("session_id"),
             "hybrid_search": hybrid_search_enabled,
             "query_expansion": query_expansion_enabled,
+            "enable_reranker": reranker_enabled,
+            "enable_semantic_cache": semantic_cache_enabled,
         }
 
         with st.chat_message("assistant"):
