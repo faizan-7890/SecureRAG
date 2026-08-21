@@ -83,6 +83,8 @@ class ChatRequest(BaseModel):
     session_id: str | None = None
     hybrid_search: bool | None = None
     query_expansion: bool | None = None
+    enable_reranker: bool | None = None
+    enable_semantic_cache: bool | None = None
 
 
 class Source(BaseModel):
@@ -97,6 +99,7 @@ class ChatResponse(BaseModel):
     answer: str
     sources: list[Source]
     session_id: str | None = None
+    cached: bool = False
 
 
 class StreamSourceEvent(BaseModel):
@@ -111,6 +114,7 @@ class StreamDoneEvent(BaseModel):
     done: bool = True
     total_tokens: int | None = None
     session_id: str | None = None
+    cached: bool = False
 
 
 class StreamErrorEvent(BaseModel):
