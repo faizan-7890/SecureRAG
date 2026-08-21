@@ -11,6 +11,7 @@ import {
   ChevronUp,
   Layers,
   Search,
+  Zap,
 } from 'lucide-react';
 import type { ApiClient } from '../api/client';
 import type { ChatMessage, Source } from '../types';
@@ -104,8 +105,15 @@ export const ChatWorkspace: React.FC<ChatWorkspaceProps> = ({
           )
         );
       },
-      () => {
+      (cached) => {
         setIsStreaming(false);
+        if (cached) {
+          setMessages((prev) =>
+            prev.map((msg) =>
+              msg.id === assistantMsgId ? { ...msg, cached: true } : msg
+            )
+          );
+        }
       }
     );
   };
@@ -209,6 +217,11 @@ export const ChatWorkspace: React.FC<ChatWorkspaceProps> = ({
                     : 'bg-slate-900 border border-slate-800 text-slate-100 rounded-bl-none shadow-sm'
                 }`}
               >
+                {msg.cached && (
+                  <div className="flex items-center gap-1.5 text-[10px] font-bold text-amber-400 mb-1.5 bg-amber-950/40 border border-amber-500/20 px-2 py-0.5 rounded-full w-fit">
+                    <Zap className="h-3 w-3" /> Semantic Cache (Instant)
+                  </div>
+                )}
                 <div className="whitespace-pre-wrap">{msg.content || (isStreaming ? 'Thinking…' : '')}</div>
 
                 {/* Grounded Citation Sources */}
