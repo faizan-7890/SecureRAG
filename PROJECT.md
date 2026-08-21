@@ -22,6 +22,9 @@
 | 7 | Ragas Evaluation Pipeline | `eval/run_evaluation.py` evaluation execution with harness/metrics | M4 | ORIGINAL_REQUEST §R3 |
 | 8 | Comprehensive Audit Report | Detailed report on tests, security, pipeline health, Ragas scores | M4 | ORIGINAL_REQUEST §R4 |
 | 9 | UI Console & Chunk Inspector | Modern Streamlit UI with multi-tab workspace, RBAC admin & chunk viewer | M5 | EXTENSION |
+| 10 | React 19 Bun SPA Frontend | Modern React + TypeScript + Tailwind web application powered by Bun | M6 | EXTENSION |
+| 11 | Two-Stage Cross-Encoder Reranker | Deep cross-attention scoring on hybrid candidates (ms-marco-MiniLM-L-6-v2) | M7 | EXTENSION |
+| 12 | Sub-10ms Semantic Vector Cache | In-memory & disk cached responses on high semantic similarity (>=0.96) | M7 | EXTENSION |
 
 ## Milestones
 | # | Name | Scope | Dependencies | Status |
@@ -30,6 +33,9 @@
 | 2 | Retrieval, Generation & Security | Hybrid retrieval, generation with citations, auth/RBAC | M1 | DONE |
 | 3 | Test Suite Fixes & Full Execution | Run all tests in `tests/`, fix failures/regressions | M2 | DONE |
 | 4 | Ragas Evaluation & Audit Report | Execute `eval/run_evaluation.py`, write audit report | M3 | DONE |
+| 5 | Streamlit Management Console | Multi-tab UI with chunk viewer & admin panel | M4 | DONE |
+| 6 | Bun React Web Application | React 19 + TypeScript + Tailwind SPA with live SSE streaming | M5 | DONE |
+| 7 | Reranker & Semantic Cache | Cross-Encoder reranking & sub-10ms semantic vector cache | M6 | DONE |
 
 ## Interface Contracts
 - Ingestion -> VectorStore: Ingested chunks -> embeddings -> Chroma collection with metadata (user_id, role, doc_id)
