@@ -152,6 +152,8 @@ class RAGService:
         session_id: str | None = None,
         hybrid_search: bool | None = None,
         query_expansion: bool | None = None,
+        enable_reranker: bool | None = None,
+        enable_semantic_cache: bool | None = None,
     ) -> ChatResponse:
         start = time.perf_counter()
         if not self.settings.effective_api_key:
@@ -163,12 +165,31 @@ class RAGService:
         if session_id and not resolved_history:
             resolved_history = SessionStore.get_history(session_id, max_messages=self.settings.max_history_messages)
 
+        # 1. Check Semantic Cache (only for standalone questions without prior dialogue dependency)
+        use_cache = self.settings.enable_semantic_cache if enable_semantic_cache is None else enable_semantic_cache
+        if use_cache and not resolved_history:
+            try:
+                from app.services.semantic_cache import SemanticCache
+
+                query_emb = self.embeddings.embed_query(question)
+                cache_hit = SemanticCache.get_instance(self.settings).lookup(question, query_emb)
+                if cache_hit:
+                    cache_hit.session_id = session_id
+                    if session_id:
+                        SessionStore.add_turn(session_id, question, cache_hit.answer, max_messages=self.settings.max_history_messages)
+                    duration_ms = round((time.perf_counter() - start) * 1000, 1)
+                    logger.info("Answered via semantic cache in %.1fms (session=%s)", duration_ms, session_id)
+                    return cache_hit
+            except Exception as cache_err:
+                logger.warning("Semantic cache lookup failed: %s", cache_err)
+
         search_query = self._recontextualize_query(question, resolved_history)
         chunks = self._retrieve(
             search_query,
             user=user,
             hybrid_search=hybrid_search,
             query_expansion=query_expansion,
+            enable_reranker=enable_reranker,
         )
         if not chunks:
             fallback_answer = "I could not find sufficiently relevant information in the uploaded documents."
@@ -178,6 +199,7 @@ class RAGService:
                 answer=fallback_answer,
                 sources=[],
                 session_id=session_id,
+                cached=False,
             )
 
         context = self._format_context(chunks)
@@ -186,8 +208,20 @@ class RAGService:
         response = llm.invoke(messages)
         answer = response.content if isinstance(response.content, str) else str(response.content)
 
+        sources = self._sources(chunks)
+
         if session_id:
             SessionStore.add_turn(session_id, question, answer, max_messages=self.settings.max_history_messages)
+
+        # Store in Semantic Cache
+        if use_cache and not resolved_history:
+            try:
+                from app.services.semantic_cache import SemanticCache
+
+                query_emb = self.embeddings.embed_query(question)
+                SemanticCache.get_instance(self.settings).store(question, query_emb, answer, sources)
+            except Exception as cache_err:
+                logger.warning("Semantic cache store failed: %s", cache_err)
 
         duration_ms = round((time.perf_counter() - start) * 1000, 1)
         logger.info(
@@ -197,7 +231,7 @@ class RAGService:
             session_id,
             extra={"duration_ms": duration_ms, "chunks": len(chunks), "session_id": session_id},
         )
-        return ChatResponse(answer=answer, sources=self._sources(chunks), session_id=session_id)
+        return ChatResponse(answer=answer, sources=sources, session_id=session_id, cached=False)
 
     def answer_stream(
         self,
@@ -207,6 +241,8 @@ class RAGService:
         session_id: str | None = None,
         hybrid_search: bool | None = None,
         query_expansion: bool | None = None,
+        enable_reranker: bool | None = None,
+        enable_semantic_cache: bool | None = None,
     ):
         """Generator yielding SSE-formatted event objects for token-by-token streaming."""
         from app.core.session_store import SessionStore
@@ -225,12 +261,31 @@ class RAGService:
         if session_id and not resolved_history:
             resolved_history = SessionStore.get_history(session_id, max_messages=self.settings.max_history_messages)
 
+        # 1. Check Semantic Cache
+        use_cache = self.settings.enable_semantic_cache if enable_semantic_cache is None else enable_semantic_cache
+        if use_cache and not resolved_history:
+            try:
+                from app.services.semantic_cache import SemanticCache
+
+                query_emb = self.embeddings.embed_query(question)
+                cache_hit = SemanticCache.get_instance(self.settings).lookup(question, query_emb)
+                if cache_hit:
+                    yield StreamSourceEvent(sources=cache_hit.sources)
+                    yield StreamTokenEvent(token=cache_hit.answer)
+                    if session_id:
+                        SessionStore.add_turn(session_id, question, cache_hit.answer, max_messages=self.settings.max_history_messages)
+                    yield StreamDoneEvent(done=True, total_tokens=1, session_id=session_id, cached=True)
+                    return
+            except Exception as cache_err:
+                logger.warning("Semantic cache lookup failed in stream: %s", cache_err)
+
         search_query = self._recontextualize_query(question, resolved_history)
         chunks = self._retrieve(
             search_query,
             user=user,
             hybrid_search=hybrid_search,
             query_expansion=query_expansion,
+            enable_reranker=enable_reranker,
         )
 
         # 1. Send retrieved citation sources immediately
@@ -242,7 +297,7 @@ class RAGService:
             yield StreamTokenEvent(token=fallback)
             if session_id:
                 SessionStore.add_turn(session_id, question, fallback, max_messages=self.settings.max_history_messages)
-            yield StreamDoneEvent(done=True, total_tokens=1, session_id=session_id)
+            yield StreamDoneEvent(done=True, total_tokens=1, session_id=session_id, cached=False)
             return
 
         context = self._format_context(chunks)
@@ -261,10 +316,21 @@ class RAGService:
             if session_id:
                 SessionStore.add_turn(session_id, question, full_answer, max_messages=self.settings.max_history_messages)
 
+            # Store in Semantic Cache
+            if use_cache and not resolved_history:
+                try:
+                    from app.services.semantic_cache import SemanticCache
+
+                    query_emb = self.embeddings.embed_query(question)
+                    SemanticCache.get_instance(self.settings).store(question, query_emb, full_answer, sources)
+                except Exception as cache_err:
+                    logger.warning("Semantic cache store failed in stream: %s", cache_err)
+
             yield StreamDoneEvent(
                 done=True,
                 total_tokens=len(collected_tokens),
                 session_id=session_id,
+                cached=False,
             )
         except Exception as error:
             logger.error("Streaming error: %s", error)
@@ -277,9 +343,11 @@ class RAGService:
         user: dict[str, str] | None = None,
         hybrid_search: bool | None = None,
         query_expansion: bool | None = None,
+        enable_reranker: bool | None = None,
     ) -> list[RetrievedChunk]:
         use_hybrid = self.settings.enable_hybrid_search if hybrid_search is None else hybrid_search
         use_expansion = self.settings.enable_query_expansion if query_expansion is None else query_expansion
+        use_reranker = self.settings.enable_reranker if enable_reranker is None else enable_reranker
         candidate_k = max(self.settings.top_k, self.settings.retrieval_candidate_k)
 
         if use_expansion:
@@ -359,11 +427,19 @@ class RAGService:
         ]
         relevant.sort(key=lambda c: c.relevance_score, reverse=True)
 
+        # Apply Cross-Encoder Reranker if enabled
+        if use_reranker and relevant:
+            from app.services.reranker import CrossEncoderReranker
+
+            reranker = CrossEncoderReranker(self.settings)
+            relevant = reranker.rerank(question, relevant, top_k=self.settings.reranker_top_k or self.settings.top_k)
+
         logger.info(
-            "Retrieved %d candidates (hybrid=%s, expansion=%s, queries=%d) above threshold %.2f",
+            "Retrieved %d candidates (hybrid=%s, expansion=%s, reranker=%s, queries=%d) above threshold %.2f",
             len(relevant),
             use_hybrid,
             use_expansion,
+            use_reranker,
             len(queries),
             self.settings.similarity_threshold,
         )
