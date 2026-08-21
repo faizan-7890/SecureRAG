@@ -57,6 +57,8 @@ def chat(
             session_id=request.session_id,
             hybrid_search=request.hybrid_search,
             query_expansion=request.query_expansion,
+            enable_reranker=request.enable_reranker,
+            enable_semantic_cache=request.enable_semantic_cache,
         )
     except RuntimeError as error:
         logger.error("Chat service error: %s", error)
@@ -103,6 +105,8 @@ def chat_stream(
                 session_id=request.session_id,
                 hybrid_search=request.hybrid_search,
                 query_expansion=request.query_expansion,
+                enable_reranker=request.enable_reranker,
+                enable_semantic_cache=request.enable_semantic_cache,
             ):
                 if isinstance(event, StreamSourceEvent):
                     yield f"event: sources\ndata: {event.model_dump_json()}\n\n"
