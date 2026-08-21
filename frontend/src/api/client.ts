@@ -188,7 +188,7 @@ export class ApiClient {
     onToken: (token: string) => void,
     onSources: (sources: Source[]) => void,
     onError: (error: string) => void,
-    onDone: () => void,
+    onDone: (cached?: boolean) => void,
   ): Promise<void> {
     const payload = {
       question,
@@ -196,6 +196,8 @@ export class ApiClient {
       session_id: sessionId,
       hybrid_search: this.settings.hybridSearch,
       query_expansion: this.settings.queryExpansion,
+      enable_reranker: this.settings.enableReranker,
+      enable_semantic_cache: this.settings.enableSemanticCache,
     };
 
     const url = this.getUrl('/chat/stream');
@@ -214,13 +216,13 @@ export class ApiClient {
       if (!response.ok) {
         const errJson = await response.json().catch(() => ({ detail: 'Chat stream failed' }));
         onError(errJson.detail || 'Request failed');
-        onDone();
+        onDone(false);
         return;
       }
 
       if (!response.body) {
         onError('ReadableStream not supported');
-        onDone();
+        onDone(false);
         return;
       }
 
@@ -257,7 +259,7 @@ export class ApiClient {
               } else if (currentEvent === 'error' && data.error) {
                 onError(data.error);
               } else if (currentEvent === 'done') {
-                onDone();
+                onDone(Boolean(data.cached));
                 return;
               }
             } catch {
@@ -267,10 +269,10 @@ export class ApiClient {
         }
       }
 
-      onDone();
+      onDone(false);
     } catch (err: any) {
       onError(err.message || 'Connection error');
-      onDone();
+      onDone(false);
     }
   }
 }
