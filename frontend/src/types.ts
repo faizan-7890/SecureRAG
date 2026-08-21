@@ -12,6 +12,7 @@ export interface ChatMessage {
   content: string;
   sources?: Source[];
   timestamp: string;
+  cached?: boolean;
 }
 
 export interface DocumentRecord {
@@ -82,4 +83,6 @@ export interface RuntimeSettings {
   streaming: boolean;
   hybridSearch: boolean;
   queryExpansion: boolean;
+  enableReranker: boolean;
+  enableSemanticCache: boolean;
 }
