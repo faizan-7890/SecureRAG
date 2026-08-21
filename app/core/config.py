@@ -55,6 +55,13 @@ class Settings(BaseSettings):
     enable_streaming: bool = True
     max_history_messages: int = Field(default=10, ge=1, le=50)
     enable_query_recontextualization: bool = True
+    enable_reranker: bool = True
+    reranker_model: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"
+    reranker_top_k: int = Field(default=4, ge=1, le=20)
+    enable_semantic_cache: bool = True
+    semantic_cache_threshold: float = Field(default=0.96, ge=0.5, le=1.0)
+    semantic_cache_ttl_seconds: int = Field(default=86400, ge=1)
+    semantic_cache_path: Path | None = None
     rate_limit_global: str = "120/minute"
     rate_limit_chat: str = "20/minute"
 
