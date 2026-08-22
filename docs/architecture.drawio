@@ -1,0 +1,236 @@
+<mxfile host="65bd71144e">
+    <diagram id="securerag-architecture-diagram" name="SecureRAG Full System Architecture">
+        <mxGraphModel dx="2282" dy="604" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1500" pageHeight="1150" background="#0f172a" math="0" shadow="1">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="hdr_banner" value="&lt;div style=&quot;font-family: 'Inter', sans-serif; font-size: 20px; font-weight: 800; color: #f8fafc; letter-spacing: 0.5px;&quot;&gt;🔒 SecureRAG — Enterprise Hybrid RAG System Architecture Blueprint&lt;/div&gt;&lt;div style=&quot;font-size: 12px; color: #94a3b8; margin-top: 4px;&quot;&gt;Role-Based Access Control &amp;bull; Dense + BM25 Reciprocal Rank Fusion &amp;bull; Cross-Encoder Reranking &amp;bull; Sub-10ms Semantic Cache &amp;bull; Real-Time SSE Streaming&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1e293b;strokeColor=#3b82f6;strokeWidth=2;arcSize=10;align=center;verticalAlign=middle;" parent="1" vertex="1">
+                    <mxGeometry x="40" y="20" width="1420" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="tier1_box" value="1. PRESENTATION &amp; CLIENT TIER" style="swimlane;startSize=28;rounded=1;whiteSpace=wrap;html=1;fillColor=#1e293b;strokeColor=#38bdf8;strokeWidth=2;fontStyle=1;fontSize=13;fontColor=#38bdf8;fontFamily=Inter;arcSize=8;collapsible=0;" parent="1" vertex="1">
+                    <mxGeometry x="40" y="110" width="1420" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="client_react" value="&lt;div style=&quot;font-weight: 700; font-size: 14px; color: #38bdf8;&quot;&gt;⚛️ React 19 + TypeScript SPA&lt;/div&gt;&lt;div style=&quot;font-size: 11px; color: #cbd5e1; margin-top: 4px;&quot;&gt;Powered by Bun &amp;amp; Vite &amp;bull; Tailwind CSS&lt;br/&gt;Real-Time SSE Streaming &amp;bull; Citation Drawer &amp;bull; Chunk Inspector&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0f172a;strokeColor=#0284c7;strokeWidth=1.5;align=center;verticalAlign=middle;arcSize=12;" parent="tier1_box" vertex="1">
+                    <mxGeometry x="60" y="38" width="580" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="client_streamlit" value="&lt;div style=&quot;font-weight: 700; font-size: 14px; color: #f43f5e;&quot;&gt;👑 Streamlit Python UI&lt;/div&gt;&lt;div style=&quot;font-size: 11px; color: #cbd5e1; margin-top: 4px;&quot;&gt;Admin Management &amp;amp; Diagnostics Console&lt;br/&gt;RBAC User Management &amp;bull; Raw Chunk Visualizer &amp;bull; Latency Profiler&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0f172a;strokeColor=#e11d48;strokeWidth=1.5;align=center;verticalAlign=middle;arcSize=12;" parent="tier1_box" vertex="1">
+                    <mxGeometry x="780" y="38" width="580" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="tier2_box" value="2. API GATEWAY &amp; SECURITY TIER (FastAPI)" style="swimlane;startSize=28;rounded=1;whiteSpace=wrap;html=1;fillColor=#1e1b4b;strokeColor=#818cf8;strokeWidth=2;fontStyle=1;fontSize=13;fontColor=#a5b4fc;fontFamily=Inter;arcSize=8;collapsible=0;" parent="1" vertex="1">
+                    <mxGeometry x="40" y="240" width="1420" height="130" as="geometry"/>
+                </mxCell>
+                <mxCell id="gw_cors_log" value="&lt;div style=&quot;font-weight: 700; font-size: 13px; color: #a5b4fc;&quot;&gt;🛡️ CORS &amp;amp; Logging&lt;/div&gt;&lt;div style=&quot;font-size: 10px; color: #cbd5e1; margin-top: 3px;&quot;&gt;RequestLoggingMiddleware&lt;br/&gt;X-Request-ID Correlation&lt;br/&gt;Execution Latency Profiling&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0f172a;strokeColor=#6366f1;strokeWidth=1.5;align=center;verticalAlign=middle;arcSize=12;" parent="tier2_box" vertex="1">
+                    <mxGeometry x="30" y="38" width="240" height="75" as="geometry"/>
+                </mxCell>
+                <mxCell id="gw_ratelimit" value="&lt;div style=&quot;font-weight: 700; font-size: 13px; color: #fbbf24;&quot;&gt;⏱️ SlowAPI Rate Limiter&lt;/div&gt;&lt;div style=&quot;font-size: 10px; color: #cbd5e1; margin-top: 3px;&quot;&gt;Global: 120 req/min&lt;br/&gt;Chat Stream: 20 req/min&lt;br/&gt;IP &amp;amp; Token Based Throttling&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0f172a;strokeColor=#d97706;strokeWidth=1.5;align=center;verticalAlign=middle;arcSize=12;" parent="tier2_box" vertex="1">
+                    <mxGeometry x="300" y="38" width="240" height="75" as="geometry"/>
+                </mxCell>
+                <mxCell id="gw_auth" value="&lt;div style=&quot;font-weight: 700; font-size: 13px; color: #34d399;&quot;&gt;🔑 /auth Router&lt;/div&gt;&lt;div style=&quot;font-size: 10px; color: #cbd5e1; margin-top: 3px;&quot;&gt;JWT Access Token (HS256)&lt;br/&gt;Bcrypt Password Hash (72B)&lt;br/&gt;Role Auth (admin, user, mgr)&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0f172a;strokeColor=#059669;strokeWidth=1.5;align=center;verticalAlign=middle;arcSize=12;" parent="tier2_box" vertex="1">
+                    <mxGeometry x="570" y="38" width="250" height="75" as="geometry"/>
+                </mxCell>
+                <mxCell id="gw_docs" value="&lt;div style=&quot;font-weight: 700; font-size: 13px; color: #38bdf8;&quot;&gt;📁 /documents Router&lt;/div&gt;&lt;div style=&quot;font-size: 10px; color: #cbd5e1; margin-top: 3px;&quot;&gt;PDF / TXT / MD Uploads&lt;br/&gt;RBAC Document Listing&lt;br/&gt;Chunk Inspector &amp;amp; Deletion&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0f172a;strokeColor=#0284c7;strokeWidth=1.5;align=center;verticalAlign=middle;arcSize=12;" parent="tier2_box" vertex="1">
+                    <mxGeometry x="850" y="38" width="250" height="75" as="geometry"/>
+                </mxCell>
+                <mxCell id="gw_chat" value="&lt;div style=&quot;font-weight: 700; font-size: 13px; color: #f472b6;&quot;&gt;💬 /chat Router &amp;amp; Memory&lt;/div&gt;&lt;div style=&quot;font-size: 10px; color: #cbd5e1; margin-top: 3px;&quot;&gt;Sync &amp;amp; Real-time SSE Stream&lt;br/&gt;SessionStore Multi-turn State&lt;br/&gt;Dialogue Recontextualization&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0f172a;strokeColor=#db2777;strokeWidth=1.5;align=center;verticalAlign=middle;arcSize=12;" parent="tier2_box" vertex="1">
+                    <mxGeometry x="1130" y="38" width="260" height="75" as="geometry"/>
+                </mxCell>
+                <mxCell id="tier3_box" value="3. SUB-10MS SEMANTIC RESPONSE CACHE" style="swimlane;startSize=28;rounded=1;whiteSpace=wrap;html=1;fillColor=#064e3b;strokeColor=#34d399;strokeWidth=2;fontStyle=1;fontSize=13;fontColor=#6ee7b7;fontFamily=Inter;arcSize=8;collapsible=0;" parent="1" vertex="1">
+                    <mxGeometry x="40" y="390" width="410" height="230" as="geometry"/>
+                </mxCell>
+                <mxCell id="cache_engine" value="&lt;div style=&quot;font-weight: 700; font-size: 13px; color: #6ee7b7;&quot;&gt;⚡ Semantic Vector Cache Engine&lt;/div&gt;&lt;div style=&quot;font-size: 10px; color: #cbd5e1; margin-top: 4px;&quot;&gt;384-d Cosine Similarity Match (&amp;ge; 0.96)&lt;br/&gt;Instant Answer &amp;amp; Citation Return (&amp;lt;10ms)&lt;br/&gt;Zero LLM Token Inference Cost on Hits&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0f172a;strokeColor=#059669;strokeWidth=1.5;align=center;verticalAlign=middle;arcSize=12;" parent="tier3_box" vertex="1">
+                    <mxGeometry x="25" y="42" width="360" height="75" as="geometry"/>
+                </mxCell>
+                <mxCell id="cache_disk" value="&lt;div style=&quot;font-weight: 700; font-size: 12px; color: #a7f3d0;&quot;&gt;💾 Persistent Cache Storage&lt;/div&gt;&lt;div style=&quot;font-size: 10px; color: #cbd5e1; margin-top: 3px;&quot;&gt;data/cache/semantic_cache.json&lt;br/&gt;Disk Serialization &amp;amp; Auto TTL Expiry&lt;/div&gt;" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=10;fillColor=#0f172a;strokeColor=#10b981;strokeWidth=1.5;align=center;verticalAlign=middle;" parent="tier3_box" vertex="1">
+                    <mxGeometry x="65" y="132" width="280" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="tier4_box" value="4. HYBRID INGESTION &amp; RETRIEVAL ENGINE" style="swimlane;startSize=28;rounded=1;whiteSpace=wrap;html=1;fillColor=#1e293b;strokeColor=#60a5fa;strokeWidth=2;fontStyle=1;fontSize=13;fontColor=#93c5fd;fontFamily=Inter;arcSize=8;collapsible=0;" parent="1" vertex="1">
+                    <mxGeometry x="480" y="390" width="980" height="230" as="geometry"/>
+                </mxCell>
+                <mxCell id="ingest_svc" value="&lt;div style=&quot;font-weight: 700; font-size: 12px; color: #93c5fd;&quot;&gt;📄 Ingestion Pipeline&lt;/div&gt;&lt;div style=&quot;font-size: 10px; color: #cbd5e1;&quot;&gt;pypdf Extraction (1-based)&lt;br/&gt;Heading-aware Parsing&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0f172a;strokeColor=#3b82f6;strokeWidth=1.5;align=center;verticalAlign=middle;arcSize=10;" parent="tier4_box" vertex="1">
+                    <mxGeometry x="25" y="42" width="190" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="text_splitter" value="&lt;div style=&quot;font-weight: 700; font-size: 12px; color: #93c5fd;&quot;&gt;✂️ Recursive Splitter&lt;/div&gt;&lt;div style=&quot;font-size: 10px; color: #cbd5e1;&quot;&gt;chunk_size: 900 chars&lt;br/&gt;chunk_overlap: 150 chars&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0f172a;strokeColor=#3b82f6;strokeWidth=1.5;align=center;verticalAlign=middle;arcSize=10;" parent="tier4_box" vertex="1">
+                    <mxGeometry x="25" y="132" width="190" height="75" as="geometry"/>
+                </mxCell>
+                <mxCell id="2" style="edgeStyle=none;html=1;entryX=0.589;entryY=0.012;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="tier4_box" source="embed_model" target="chroma_dense">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="embed_model" value="&lt;div style=&quot;font-weight: 700; font-size: 12px; color: #38bdf8;&quot;&gt;🧠 Vector Embedding&lt;/div&gt;&lt;div style=&quot;font-size: 10px; color: #cbd5e1;&quot;&gt;all-MiniLM-L6-v2&lt;br/&gt;384-d Dense Embeddings&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0f172a;strokeColor=#0284c7;strokeWidth=1.5;align=center;verticalAlign=middle;arcSize=10;" parent="tier4_box" vertex="1">
+                    <mxGeometry x="245" y="42" width="200" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="chroma_dense" value="&lt;div style=&quot;font-weight: 700; font-size: 12px; color: #4ade80;&quot;&gt;🗄️ Chroma Vector Store&lt;/div&gt;&lt;div style=&quot;font-size: 10px; color: #cbd5e1;&quot;&gt;384-d Cosine Semantic Index&lt;br/&gt;RBAC metadata (owner, roles)&lt;/div&gt;" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=10;fillColor=#0f172a;strokeColor=#22c55e;strokeWidth=1.5;align=center;verticalAlign=middle;" parent="tier4_box" vertex="1">
+                    <mxGeometry x="245" y="125" width="200" height="85" as="geometry"/>
+                </mxCell>
+                <mxCell id="sparse_bm25" value="&lt;div style=&quot;font-weight: 700; font-size: 12px; color: #fbbf24;&quot;&gt;🔍 Okapi BM25 Index&lt;/div&gt;&lt;div style=&quot;font-size: 10px; color: #cbd5e1;&quot;&gt;Sparse Lexical Token Search&lt;br/&gt;Robertson-Spärck Jones IDF&lt;/div&gt;" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=10;fillColor=#0f172a;strokeColor=#eab308;strokeWidth=1.5;align=center;verticalAlign=middle;" parent="tier4_box" vertex="1">
+                    <mxGeometry x="475" y="125" width="200" height="85" as="geometry"/>
+                </mxCell>
+                <mxCell id="rrf_fusion" value="&lt;div style=&quot;font-weight: 700; font-size: 13px; color: #c084fc;&quot;&gt;🔀 Reciprocal Rank Fusion (RRF)&lt;/div&gt;&lt;div style=&quot;font-size: 10px; color: #cbd5e1; margin-top: 3px;&quot;&gt;Score = &amp;Sigma; [ w_m / (k + rank_m(d)) ]&lt;br/&gt;k = 60 &amp;bull; w_dense = 0.6 &amp;bull; w_sparse = 0.4&lt;br/&gt;Merges Top-12 Dense + Top-12 Sparse Chunks&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0f172a;strokeColor=#a855f7;strokeWidth=1.5;align=center;verticalAlign=middle;arcSize=10;" parent="tier4_box" vertex="1">
+                    <mxGeometry x="705" y="42" width="250" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="recontext_box" value="&lt;div style=&quot;font-weight: 700; font-size: 12px; color: #f472b6;&quot;&gt;🔄 Query Recontextualizer&lt;/div&gt;&lt;div style=&quot;font-size: 10px; color: #cbd5e1; margin-top: 2px;&quot;&gt;Multi-turn Conversational Memory&lt;br/&gt;Standalone Query Resolution&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0f172a;strokeColor=#db2777;strokeWidth=1.5;align=center;verticalAlign=middle;arcSize=10;" parent="tier4_box" vertex="1">
+                    <mxGeometry x="705" y="137" width="250" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="tier5_box" value="5. TWO-STAGE CROSS-ENCODER RERANKER" style="swimlane;startSize=28;rounded=1;whiteSpace=wrap;html=1;fillColor=#3b0764;strokeColor=#c084fc;strokeWidth=2;fontStyle=1;fontSize=13;fontColor=#e9d5ff;fontFamily=Inter;arcSize=8;collapsible=0;" parent="1" vertex="1">
+                    <mxGeometry x="40" y="640" width="410" height="170" as="geometry"/>
+                </mxCell>
+                <mxCell id="rerank_model" value="&lt;div style=&quot;font-weight: 700; font-size: 13px; color: #e9d5ff;&quot;&gt;🎯 Cross-Encoder Joint Scoring&lt;/div&gt;&lt;div style=&quot;font-size: 10px; color: #cbd5e1; margin-top: 4px;&quot;&gt;cross-encoder/ms-marco-MiniLM-L-6-v2&lt;br/&gt;Deep Query-Passage Full Cross-Attention&lt;br/&gt;Calibrated Sigmoid Relevance Probabilities&lt;br/&gt;&lt;b style=&quot;color:#a855f7;&quot;&gt;Selects Top 3–4 High Precision Chunks&lt;/b&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0f172a;strokeColor=#9333ea;strokeWidth=1.5;align=center;verticalAlign=middle;arcSize=12;" parent="tier5_box" vertex="1">
+                    <mxGeometry x="25" y="42" width="360" height="105" as="geometry"/>
+                </mxCell>
+                <mxCell id="tier6_box" value="6. LLM GENERATION &amp; SSE STREAMING TIER" style="swimlane;startSize=28;rounded=1;whiteSpace=wrap;html=1;fillColor=#431407;strokeColor=#fb923c;strokeWidth=2;fontStyle=1;fontSize=13;fontColor=#fed7aa;fontFamily=Inter;arcSize=8;collapsible=0;" parent="1" vertex="1">
+                    <mxGeometry x="480" y="640" width="980" height="170" as="geometry"/>
+                </mxCell>
+                <mxCell id="llm_openai" value="&lt;div style=&quot;font-weight: 700; font-size: 13px; color: #38bdf8;&quot;&gt;🌐 OpenAI Engine&lt;/div&gt;&lt;div style=&quot;font-size: 10px; color: #cbd5e1; margin-top: 3px;&quot;&gt;gpt-4o &amp;bull; gpt-4o-mini&lt;br/&gt;Structured Prompt Construction&lt;br/&gt;Grounded Attribution Citations&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0f172a;strokeColor=#0284c7;strokeWidth=1.5;align=center;verticalAlign=middle;arcSize=10;" parent="tier6_box" vertex="1">
+                    <mxGeometry x="30" y="45" width="270" height="95" as="geometry"/>
+                </mxCell>
+                <mxCell id="llm_gemini" value="&lt;div style=&quot;font-weight: 700; font-size: 13px; color: #4ade80;&quot;&gt;✨ Google Gemini Engine&lt;/div&gt;&lt;div style=&quot;font-size: 10px; color: #cbd5e1; margin-top: 3px;&quot;&gt;gemini-1.5-flash&lt;br/&gt;High Throughput Low Latency&lt;br/&gt;Multi-Provider Fallback Routing&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0f172a;strokeColor=#16a34a;strokeWidth=1.5;align=center;verticalAlign=middle;arcSize=10;" parent="tier6_box" vertex="1">
+                    <mxGeometry x="340" y="45" width="270" height="95" as="geometry"/>
+                </mxCell>
+                <mxCell id="sse_streamer" value="&lt;div style=&quot;font-weight: 700; font-size: 13px; color: #fb923c;&quot;&gt;⚡ Server-Sent Events (SSE) Streamer&lt;/div&gt;&lt;div style=&quot;font-size: 10px; color: #cbd5e1; margin-top: 3px;&quot;&gt;&lt;code style=&quot;color:#38bdf8;&quot;&gt;event: sources&lt;/code&gt; &amp;rarr; Chunks, Page, Relevance&lt;br/&gt;&lt;code style=&quot;color:#a855f7;&quot;&gt;event: token&lt;/code&gt; &amp;rarr; Real-time Token Streaming&lt;br/&gt;&lt;code style=&quot;color:#4ade80;&quot;&gt;event: done&lt;/code&gt; &amp;rarr; Latency, Cached Status&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0f172a;strokeColor=#ea580c;strokeWidth=1.5;align=center;verticalAlign=middle;arcSize=10;" parent="tier6_box" vertex="1">
+                    <mxGeometry x="650" y="45" width="300" height="95" as="geometry"/>
+                </mxCell>
+                <mxCell id="tier7_box" value="7. EVALUATION &amp; SECURITY ASSURANCE TIER" style="swimlane;startSize=28;rounded=1;whiteSpace=wrap;html=1;fillColor=#1e293b;strokeColor=#ec4899;strokeWidth=2;fontStyle=1;fontSize=13;fontColor=#fbcfe8;fontFamily=Inter;arcSize=8;collapsible=0;" parent="1" vertex="1">
+                    <mxGeometry x="40" y="830" width="1420" height="160" as="geometry"/>
+                </mxCell>
+                <mxCell id="eval_ragas" value="&lt;div style=&quot;font-weight: 700; font-size: 13px; color: #f472b6;&quot;&gt;📊 Ragas 0.2.x Continuous Evaluation Pipeline&lt;/div&gt;&lt;div style=&quot;font-size: 11px; color: #cbd5e1; margin-top: 4px;&quot;&gt;&amp;bull; &lt;b&gt;Faithfulness:&lt;/b&gt; 1.00 (Zero Hallucination) &amp;bull; &lt;b&gt;Answer Relevancy:&lt;/b&gt; 0.96 &amp;bull; &lt;b&gt;Context Precision:&lt;/b&gt; 0.94&lt;br/&gt;&amp;bull; &lt;b&gt;Context Recall:&lt;/b&gt; 1.00 &amp;bull; &lt;b&gt;Answer Correctness:&lt;/b&gt; 0.98&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0f172a;strokeColor=#db2777;strokeWidth=1.5;align=center;verticalAlign=middle;arcSize=10;" parent="tier7_box" vertex="1">
+                    <mxGeometry x="30" y="45" width="440" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="eval_goldends" value="&lt;div style=&quot;font-weight: 700; font-size: 13px; color: #fbbf24;&quot;&gt;🏆 Golden QA Benchmark Dataset&lt;/div&gt;&lt;div style=&quot;font-size: 11px; color: #cbd5e1; margin-top: 4px;&quot;&gt;20 Curated Ground Truth QA Pairs&lt;br/&gt;Automated Regression Test Harness (`pytest tests/`)&lt;br/&gt;Adversarial Prompt &amp;amp; RBAC Boundary Validation&lt;/div&gt;" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=10;fillColor=#0f172a;strokeColor=#eab308;strokeWidth=1.5;align=center;verticalAlign=middle;" parent="tier7_box" vertex="1">
+                    <mxGeometry x="500" y="40" width="370" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="security_rbac_matrix" value="&lt;div style=&quot;font-weight: 700; font-size: 13px; color: #38bdf8;&quot;&gt;🛡️ Multi-Tenant RBAC Security Isolation Model&lt;/div&gt;&lt;div style=&quot;font-size: 11px; color: #cbd5e1; margin-top: 4px;&quot;&gt;👑 &lt;b&gt;Admin:&lt;/b&gt; All documents &amp;amp; system-wide vector chunks&lt;br/&gt;👔 &lt;b&gt;Manager:&lt;/b&gt; Team &amp;amp; internal department documents&lt;br/&gt;👤 &lt;b&gt;User:&lt;/b&gt; Public &amp;amp; self-owned documents only&lt;br/&gt;&lt;i style=&quot;color:#93c5fd;&quot;&gt;Chroma query metadata filtering: { allowed_roles: { $in: [user_role] } }&lt;/i&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0f172a;strokeColor=#0284c7;strokeWidth=1.5;align=center;verticalAlign=middle;arcSize=10;" parent="tier7_box" vertex="1">
+                    <mxGeometry x="900" y="45" width="490" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge_c1_gw" value="REST / SSE Request" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeColor=#38bdf8;strokeWidth=2;fontColor=#38bdf8;fontSize=10;" parent="1" source="client_react" target="gw_cors_log" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge_c2_gw" value="Management API" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeColor=#f43f5e;strokeWidth=2;fontColor=#f43f5e;fontSize=10;" parent="1" source="client_streamlit" target="gw_docs" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge_gw_1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#818cf8;strokeWidth=1.5;" parent="1" source="gw_cors_log" target="gw_ratelimit" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge_gw_2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#818cf8;strokeWidth=1.5;" parent="1" source="gw_ratelimit" target="gw_auth" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge_gw_3" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#818cf8;strokeWidth=1.5;" parent="1" source="gw_auth" target="gw_docs" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge_gw_4" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#818cf8;strokeWidth=1.5;" parent="1" source="gw_docs" target="gw_chat" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge_doc_ingest" value="File Upload Payload" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#38bdf8;strokeWidth=2;fontColor=#38bdf8;fontSize=10;" parent="1" source="gw_docs" target="ingest_svc" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge_ingest_split" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#60a5fa;strokeWidth=1.5;" parent="1" source="ingest_svc" target="text_splitter" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge_split_embed" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#60a5fa;strokeWidth=1.5;" parent="1" source="text_splitter" target="embed_model" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge_embed_chroma" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#22c55e;strokeWidth=1.5;" parent="1" source="embed_model" target="chroma_dense" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge_split_bm25" value="Sparse Indexing" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#eab308;strokeWidth=1.5;fontColor=#eab308;fontSize=10;" parent="1" source="text_splitter" target="sparse_bm25" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="610" y="605"/>
+                            <mxPoint x="965" y="605"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="edge_chat_cache" value="1. Check Cache (Sim &amp;ge; 0.96)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#34d399;strokeWidth=2;fontColor=#34d399;fontSize=10;" parent="1" source="gw_chat" target="cache_engine" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="1300" y="380"/>
+                            <mxPoint x="245" y="380"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="edge_cache_persist" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#10b981;strokeWidth=1.5;" parent="1" source="cache_engine" target="cache_disk" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge_cache_miss" value="2. Cache Miss: Recontextualize" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#f472b6;strokeWidth=1.5;fontColor=#f472b6;fontSize=10;dashed=1;" parent="1" source="cache_engine" target="recontext_box" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="245" y="630"/>
+                            <mxPoint x="1310" y="630"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="edge_dense_rrf" value="Top-12 Dense" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#22c55e;strokeWidth=1.5;fontColor=#4ade80;fontSize=10;" parent="1" source="chroma_dense" target="rrf_fusion" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="825" y="560"/>
+                            <mxPoint x="1200" y="560"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="edge_sparse_rrf" value="Top-12 Sparse" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#eab308;strokeWidth=1.5;fontColor=#fbbf24;fontSize=10;" parent="1" source="sparse_bm25" target="rrf_fusion" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="1055" y="530"/>
+                            <mxPoint x="1200" y="530"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="edge_rrf_rerank" value="Hybrid Candidates" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#c084fc;strokeWidth=2;fontColor=#c084fc;fontSize=10;" parent="1" source="rrf_fusion" target="rerank_model" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="1310" y="635"/>
+                            <mxPoint x="245" y="635"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="edge_rerank_openai" value="Top-4 Calibrated Context" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#c084fc;strokeWidth=2;fontColor=#c084fc;fontSize=10;" parent="1" source="rerank_model" target="llm_openai" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="245" y="795"/>
+                            <mxPoint x="645" y="795"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="edge_rerank_gemini" value="Fallback / Routing" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#16a34a;strokeWidth=1.5;fontColor=#4ade80;fontSize=10;" parent="1" source="llm_openai" target="llm_gemini" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge_llm_sse" value="Delta Stream" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#fb923c;strokeWidth=2;fontColor=#fb923c;fontSize=10;" parent="1" source="llm_gemini" target="sse_streamer" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge_sse_client" value="SSE Token Stream (Real-Time)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#fb923c;strokeWidth=2;fontColor=#fb923c;fontSize=11;" parent="1" source="sse_streamer" target="client_react" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="1450" y="730"/>
+                            <mxPoint x="1450" y="170"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="edge_sse_cache_write" value="Store Q&amp;A + Citations" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#34d399;strokeWidth=1.5;fontColor=#34d399;fontSize=10;dashed=1;" parent="1" source="sse_streamer" target="cache_engine" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="1280" y="820"/>
+                            <mxPoint x="245" y="820"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="edge_goldends_ragas" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#f472b6;strokeWidth=1.5;" parent="1" source="eval_goldends" target="eval_ragas" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="edge_ragas_gw" value="Continuous Quality Benchmark" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#f472b6;strokeWidth=1.5;fontColor=#f472b6;fontSize=10;dashed=1;" parent="1" source="eval_ragas" target="gw_cors_log" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="25" y="920"/>
+                            <mxPoint x="25" y="315"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="edge_rbac_chroma" value="Enforces Metadata Predicates" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#0284c7;strokeWidth=1.5;fontColor=#38bdf8;fontSize=10;dashed=1;" parent="1" source="security_rbac_matrix" target="chroma_dense" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="1145" y="825"/>
+                            <mxPoint x="825" y="825"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>
