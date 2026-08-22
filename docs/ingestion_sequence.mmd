@@ -1,0 +1,23 @@
+sequenceDiagram
+    autonumber
+    actor Client as User / Admin
+    participant API as POST /documents/upload
+    participant Ingest as DocumentIngestionService
+    participant Splitter as RecursiveCharacterTextSplitter
+    participant Embed as SentenceTransformers (all-MiniLM-L6-v2)
+    participant Chroma as Chroma Vector DB (Dense)
+    participant BM25 as Okapi BM25 Index (Sparse)
+    participant Registry as DocumentRegistry
+
+    Client->>API: Upload Document (PDF / TXT / MD)
+    API->>API: Validate file type & size
+    API->>Ingest: Ingest file with owner metadata
+    Ingest->>Splitter: Split text (chunk_size=900, overlap=150)
+    Splitter-->>Ingest: Text chunks with page numbers
+    Ingest->>Embed: Generate 384-d normalized embeddings
+    Embed-->>Ingest: Vector representations
+    Ingest->>Chroma: Store chunks, vectors & RBAC metadata
+    Ingest->>BM25: Tokenize & update sparse index stats
+    Ingest->>Registry: Register document record
+    Ingest-->>API: IngestionResult (chunks count, doc_id)
+    API-->>Client: 201 Created (UploadResponse)

@@ -1,0 +1,34 @@
+sequenceDiagram
+    autonumber
+    actor Client as React Client (Bun) / Streamlit
+    participant ChatAPI as POST /chat/stream
+    participant Cache as Semantic Cache
+    participant Memory as SessionStore
+    participant Retriever as Hybrid Retriever
+    participant Reranker as Cross-Encoder Reranker
+    participant LLM as OpenAI / Gemini
+
+    Client->>ChatAPI: POST /chat/stream (question, session_id)
+    ChatAPI->>Cache: Lookup query embedding (cosine sim >= 0.96)
+    alt Semantic Cache Hit
+        Cache-->>ChatAPI: Return cached answer & sources (<10ms)
+        ChatAPI-->>Client: event: sources (Citation metadata)
+        ChatAPI-->>Client: event: token (Full cached answer)
+        ChatAPI-->>Client: event: done (cached: true)
+    else Semantic Cache Miss
+        ChatAPI->>Memory: Retrieve conversation turns
+        Memory-->>ChatAPI: Prior dialogue context
+        ChatAPI->>Retriever: Retrieve candidates (Dense + BM25 RRF, k=12)
+        Retriever-->>ChatAPI: 12 Candidate Chunks
+        ChatAPI->>Reranker: Score query-passage cross-attention
+        Reranker-->>ChatAPI: Top-4 Reranked Chunks
+        ChatAPI-->>Client: event: sources (Grounded citation metadata)
+        ChatAPI->>LLM: Prompt LLM with reranked context
+        loop Token Streaming
+            LLM-->>ChatAPI: Next generated token
+            ChatAPI-->>Client: event: token (text snippet)
+        end
+        ChatAPI->>Cache: Store (query, embedding, answer, sources)
+        ChatAPI->>Memory: Save turn to SessionStore
+        ChatAPI-->>Client: event: done (cached: false)
+    end
