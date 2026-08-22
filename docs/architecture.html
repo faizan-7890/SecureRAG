@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SecureRAG — Architecture Blueprint & Diagrams</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #0b0f19;
+      --bg-secondary: #111827;
+      --bg-card: #1f2937;
+      --border-color: #374151;
+      --accent-cyan: #06b6d4;
+      --accent-blue: #3b82f6;
+      --accent-purple: #8b5cf6;
+      --accent-emerald: #10b981;
+      --text-main: #f9fafb;
+      --text-muted: #9ca3af;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg-primary);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: linear-gradient(135deg, #111827 0%, #1e1b4b 100%);
+      border-bottom: 1px solid var(--border-color);
+      padding: 1.5rem 2rem;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .brand-icon {
+      font-size: 1.75rem;
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .brand h1 {
+      font-size: 1.4rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .brand span {
+      color: var(--accent-cyan);
+    }
+
+    .badge {
+      display: inline-block;
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 0.25rem 0.6rem;
+      border-radius: 9999px;
+      background: rgba(6, 182, 212, 0.15);
+      color: var(--accent-cyan);
+      border: 1px solid rgba(6, 182, 212, 0.3);
+    }
+
+    .tabs {
+      display: flex;
+      gap: 0.5rem;
+      background: var(--bg-secondary);
+      padding: 0.35rem;
+      border-radius: 0.75rem;
+      border: 1px solid var(--border-color);
+      flex-wrap: wrap;
+    }
+
+    .tab-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      padding: 0.5rem 1rem;
+      font-size: 0.85rem;
+      font-weight: 500;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-family: inherit;
+    }
+
+    .tab-btn:hover {
+      color: var(--text-main);
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .tab-btn.active {
+      background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+      color: #ffffff;
+      font-weight: 600;
+      box-shadow: 0 2px 10px rgba(59, 130, 246, 0.4);
+    }
+
+    main {
+      flex: 1;
+      padding: 2rem;
+      max-width: 1400px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    .view-panel {
+      display: none;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .view-panel.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 1rem;
+      padding: 1.75rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.25);
+    }
+
+    .card-header {
+      margin-bottom: 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      padding-bottom: 1rem;
+    }
+
+    .card-title {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .card-desc {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      margin-top: 0.25rem;
+    }
+
+    .diagram-container {
+      background: #0d1117;
+      border-radius: 0.75rem;
+      padding: 2rem;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      overflow-x: auto;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 400px;
+    }
+
+    .diagram-container svg {
+      max-width: 100%;
+      height: auto;
+    }
+
+    .infographic-box {
+      text-align: center;
+      margin-bottom: 1.5rem;
+    }
+
+    .infographic-box img {
+      max-width: 100%;
+      border-radius: 0.75rem;
+      border: 1px solid var(--border-color);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    }
+
+    footer {
+      text-align: center;
+      padding: 1.5rem;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      border-top: 1px solid var(--border-color);
+      background: var(--bg-secondary);
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <span class="brand-icon">🔒</span>
+      <div>
+        <h1>Secure<span>RAG</span> Architecture Visualizer</h1>
+        <p style="font-size: 0.8rem; color: var(--text-muted);">Enterprise RBAC Hybrid Retrieval-Augmented Generation</p>
+      </div>
+    </div>
+    <div class="tabs">
+      <button class="tab-btn active" onclick="showTab('infographic', this)">🖼️ High-Res Infographic</button>
+      <button class="tab-btn" onclick="showTab('topology', this)">📐 System Topology</button>
+      <button class="tab-btn" onclick="showTab('query-stream', this)">⚡ Chat & Stream Flow</button>
+      <button class="tab-btn" onclick="showTab('ingestion', this)">📄 Ingestion Flow</button>
+      <button class="tab-btn" onclick="showTab('rbac', this)">🛡️ RBAC Security Model</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- TAB 1: Infographic Image -->
+    <div id="infographic" class="view-panel active">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">✨ Rendered High-Resolution System Infographic</div>
+            <div class="card-desc">Visual 6-layer architecture overview showcasing Client, API Gateway, Hybrid Retrieval, Reranker, Cache, LLM, and Evaluation tiers.</div>
+          </div>
+          <span class="badge">Visual Artifact</span>
+        </div>
+        <div class="infographic-box">
+          <img src="assets/architecture_diagram.png" alt="SecureRAG Architecture Infographic" />
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: Interactive System Topology -->
+    <div id="topology" class="view-panel">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">🌐 Full Interactive System Topology</div>
+            <div class="card-desc">Detailed multi-tier component connections and data flows.</div>
+          </div>
+          <span class="badge">Mermaid Live Render</span>
+        </div>
+        <div class="diagram-container">
+          <pre class="mermaid">
+flowchart TD
+    %% ── 1. Client Tier ──
+    subgraph ClientTier ["1. Client Tier"]
+        ReactApp["React 19 + TypeScript SPA<br/>(Bun + Vite)"]
+        StreamlitApp["Streamlit Python UI<br/>(Admin & Diagnostic Console)"]
+    end
+
+    %% ── 2. API Gateway Tier ──
+    subgraph APITier ["2. API Gateway & Security Tier (FastAPI)"]
+        CORS["CORS Middleware"]
+        Logging["RequestLoggingMiddleware<br/>(X-Request-ID Tracking)"]
+        RateLimiter["SlowAPI Rate Limiter<br/>(120/min global | 20/min chat)"]
+        AuthRouter["/auth Router<br/>(JWT HS256, Bcrypt 72B)"]
+        DocRouter["/documents Router<br/>(Upload, Delete, RBAC Role Filter)"]
+        ChatRouter["/chat Router<br/>(Sync Query & SSE Token Stream)"]
+    end
+
+    %% ── 3. Semantic Cache Tier ──
+    subgraph CacheTier ["3. Sub-10ms Semantic Vector Cache"]
+        SemCache[("Semantic Vector Cache<br/>(Cosine Sim >= 0.96 & JSON Store)")]
+    end
+
+    %% ── 4. Hybrid Ingestion & Retrieval Engine ──
+    subgraph RAGCore ["4. Hybrid Ingestion & Retrieval Engine"]
+        Ingestion["DocumentIngestionService<br/>(PyPDF, Heading Splitter)"]
+        DenseStore[("Chroma Vector Store<br/>(384-d Cosine Metric)")]
+        SparseStore[("Okapi BM25 Index<br/>(Robertson-Spärck Jones IDF)")]
+        RRF["Reciprocal Rank Fusion<br/>(k=60 | Dense: 0.6, Sparse: 0.4)"]
+        Recontext["Dialogue Recontextualizer<br/>(Multi-turn Memory Synthesis)"]
+    end
+
+    %% ── 5. Two-Stage Reranker Tier ──
+    subgraph RerankTier ["5. Two-Stage Cross-Encoder Reranker"]
+        CrossEncoder["CrossEncoder Model<br/>(cross-encoder/ms-marco-MiniLM-L-6-v2)"]
+    end
+
+    %% ── 6. LLM Generation Tier ──
+    subgraph LLMTier ["6. LLM Generation & SSE Streaming"]
+        OpenAIProvider["OpenAI Engine<br/>(gpt-4o-mini / gpt-4o)"]
+        GeminiProvider["Google Gemini Engine<br/>(gemini-1.5-flash)"]
+        SSEGen["SSE Event Streamer<br/>(Sources, Tokens, Done)"]
+    end
+
+    %% ── 7. Evaluation Tier ──
+    subgraph EvalTier ["7. Evaluation & Quality Assurance"]
+        Ragas["Ragas 0.2.x Pipeline<br/>(Faithfulness, Relevancy, Precision, Recall)"]
+        GoldenDS[("Golden QA Dataset<br/>(20 Curated Ground Truths)")]
+    end
+
+    %% ── Inter-layer Connections ──
+    ReactApp --> CORS
+    StreamlitApp --> CORS
+    CORS --> Logging
+    Logging --> RateLimiter
+    RateLimiter --> AuthRouter
+    RateLimiter --> DocRouter
+    RateLimiter --> ChatRouter
+
+    DocRouter --> Ingestion
+    Ingestion --> DenseStore
+    Ingestion --> SparseStore
+
+    ChatRouter --> SemCache
+    SemCache -.->|Cache Miss| Recontext
+    Recontext --> DenseStore
+    Recontext --> SparseStore
+
+    DenseStore --> RRF
+    SparseStore --> RRF
+    RRF --> CrossEncoder
+
+    CrossEncoder --> OpenAIProvider
+    CrossEncoder --> GeminiProvider
+    OpenAIProvider --> SSEGen
+    GeminiProvider --> SSEGen
+    SSEGen --> ReactApp
+    SSEGen --> StreamlitApp
+    SSEGen -.->|Store Query & Answer| SemCache
+
+    GoldenDS --> Ragas
+    Ragas --> APITier
+          </pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: Chat Stream Sequence -->
+    <div id="query-stream" class="view-panel">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">⚡ Real-time SSE Chat & Hybrid Retrieval Lifecycle</div>
+            <div class="card-desc">Detailed step-by-step query lifecycle including semantic cache check, cross-attention scoring, and token streaming.</div>
+          </div>
+          <span class="badge">Sequence Flow</span>
+        </div>
+        <div class="diagram-container">
+          <pre class="mermaid">
+sequenceDiagram
+    autonumber
+    actor Client as React Client (Bun) / Streamlit
+    participant ChatAPI as POST /chat/stream
+    participant Cache as Semantic Vector Cache
+    participant Memory as SessionStore
+    participant Retriever as Hybrid Retriever (Chroma + BM25)
+    participant Reranker as Cross-Encoder Reranker
+    participant LLM as OpenAI / Gemini
+
+    Client->>ChatAPI: POST /chat/stream (question, session_id)
+    ChatAPI->>Cache: Lookup query embedding (cosine sim >= 0.96)
+    alt Semantic Cache Hit (< 10ms)
+        Cache-->>ChatAPI: Return cached answer & sources
+        ChatAPI-->>Client: event: sources (Citation metadata)
+        ChatAPI-->>Client: event: token (Full cached answer)
+        ChatAPI-->>Client: event: done (cached: true)
+    else Semantic Cache Miss
+        ChatAPI->>Memory: Retrieve conversation turns
+        Memory-->>ChatAPI: Prior dialogue context
+        ChatAPI->>Retriever: Retrieve candidates (Dense + BM25 RRF, k=12)
+        Retriever-->>ChatAPI: 12 Candidate Chunks
+        ChatAPI->>Reranker: Score query-passage cross-attention
+        Reranker-->>ChatAPI: Top-4 Reranked Chunks
+        ChatAPI-->>Client: event: sources (Grounded citation metadata)
+        ChatAPI->>LLM: Prompt LLM with reranked context
+        loop Token Streaming
+            LLM-->>ChatAPI: Next generated token
+            ChatAPI-->>Client: event: token (text snippet)
+        end
+        ChatAPI->>Cache: Store (query, embedding, answer, sources)
+        ChatAPI->>Memory: Save turn to SessionStore
+        ChatAPI-->>Client: event: done (cached: false)
+    end
+          </pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 4: Ingestion Sequence -->
+    <div id="ingestion" class="view-panel">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">📄 Document Ingestion & Vector Indexing Flow</div>
+            <div class="card-desc">Page-aware extraction, recursive splitting, dense embedding, and sparse BM25 indexing.</div>
+          </div>
+          <span class="badge">Ingestion Flow</span>
+        </div>
+        <div class="diagram-container">
+          <pre class="mermaid">
+sequenceDiagram
+    autonumber
+    actor Client as User / Admin
+    participant API as POST /documents/upload
+    participant Ingest as DocumentIngestionService
+    participant Splitter as RecursiveCharacterTextSplitter
+    participant Embed as SentenceTransformers (all-MiniLM-L6-v2)
+    participant Chroma as Chroma Vector DB (Dense)
+    participant BM25 as Okapi BM25 Index (Sparse)
+    participant Registry as DocumentRegistry
+
+    Client->>API: Upload Document (PDF / TXT / MD)
+    API->>API: Validate file type & size
+    API->>Ingest: Ingest file with owner & role metadata
+    Ingest->>Splitter: Split text (chunk_size=900, overlap=150)
+    Splitter-->>Ingest: Text chunks with page numbers
+    Ingest->>Embed: Generate 384-d normalized embeddings
+    Embed-->>Ingest: Vector representations
+    Ingest->>Chroma: Store chunks, vectors & RBAC metadata
+    Ingest->>BM25: Tokenize & update sparse index stats
+    Ingest->>Registry: Register document record
+    Ingest-->>API: IngestionResult (chunks count, doc_id)
+    API-->>Client: 201 Created (UploadResponse)
+          </pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 5: RBAC Model -->
+    <div id="rbac" class="view-panel">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">🛡️ Role-Based Access Control (RBAC) Security Architecture</div>
+            <div class="card-desc">Multi-tenant role boundaries and ChromaDB query-level document isolation.</div>
+          </div>
+          <span class="badge">Security Flow</span>
+        </div>
+        <div class="diagram-container">
+          <pre class="mermaid">
+flowchart LR
+    subgraph Roles ["User Role Hierarchy"]
+        AdminRole["👑 Admin Role<br/>(Full Access to all chunks & docs)"]
+        MgrRole["👔 Manager Role<br/>(Access to Team & Internal docs)"]
+        UserRole["👤 User Role<br/>(Access only to Public & Owned docs)"]
+    end
+
+    subgraph VectorFilter ["ChromaDB RBAC Query Filter"]
+        FilterLogic["Metadata Filter:<br/>$or: [<br/>  { allowed_roles: { $in: [user_role] } },<br/>  { owner_id: user_id }<br/>]"]
+    end
+
+    subgraph ChunksCollection ["Secured Chroma DB Chunks"]
+        DocPublic["Chunk 1: Public Policy<br/>roles: [user, manager, admin]"]
+        DocInternal["Chunk 2: Financial Roadmap<br/>roles: [manager, admin]"]
+        DocConfidential["Chunk 3: Exec Strategy<br/>roles: [admin]"]
+    end
+
+    AdminRole -->|Can Retrieve All| ChunksCollection
+    MgrRole -->|Filtered Retrieval| DocPublic
+    MgrRole -->|Filtered Retrieval| DocInternal
+    UserRole -->|Filtered Retrieval| DocPublic
+    FilterLogic -.->|Enforced in| ChunksCollection
+          </pre>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    SecureRAG Enterprise Architecture Blueprint &bull; Built with FastAPI, ChromaDB, Sentence-Transformers, Bun & React 19
+  </footer>
+
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'dark',
+      themeVariables: {
+        darkMode: true,
+        background: '#0d1117',
+        primaryColor: '#1e293b',
+        primaryTextColor: '#f8fafc',
+        primaryBorderColor: '#38bdf8',
+        lineColor: '#60a5fa',
+        secondaryColor: '#1e1e38',
+        tertiaryColor: '#142d2b'
+      }
+    });
+
+    function showTab(tabId, btn) {
+      document.querySelectorAll('.view-panel').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+      
+      document.getElementById(tabId).classList.add('active');
+      if (btn) btn.classList.add('active');
+    }
+  </script>
+</body>
+</html>
