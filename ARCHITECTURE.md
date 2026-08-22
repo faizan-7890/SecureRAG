@@ -1,67 +1,96 @@
 # 🔒 SecureRAG — Enterprise Architecture & System Blueprint (v2)
 
+![SecureRAG Architecture Diagram](docs/assets/architecture_diagram.png)
+
+---
+
 ## 1. System Topology Overview
 
 SecureRAG is an enterprise-grade Retrieval-Augmented Generation (RAG) system engineered with Role-Based Access Control (RBAC), multi-provider LLM support, hybrid search fusion, two-stage Cross-Encoder reranking, and sub-10ms semantic vector caching.
 
+> [!TIP]
+> **Interactive Mermaid Canvas**: You can also open the standalone [architecture_topology.mmd](file:///C:/Users/Faizan%20J/securerag/docs/architecture_topology.mmd) file directly in the Antigravity IDE using your Mermaid extension to zoom, pan, and export.
+
 ```mermaid
-graph TD
+flowchart TD
+    %% ── 1. Client Tier ──
     subgraph ClientTier ["1. Client Tier"]
-        ReactApp["React 19 + TypeScript SPA<br/>(Powered by Bun / Vite)"]
-        StreamlitApp["Streamlit Python UI<br/>(Management Console)"]
+        ReactApp["React 19 + TypeScript SPA<br/>(Powered by Bun & Vite)"]
+        StreamlitApp["Streamlit Python UI<br/>(Admin & Management Console)"]
     end
 
-    subgraph APITier ["2. API & Security Gateway (FastAPI)"]
+    %% ── 2. API Gateway Tier ──
+    subgraph APITier ["2. API Gateway & Security Tier (FastAPI)"]
         CORS["CORS Middleware"]
         Logging["RequestLoggingMiddleware<br/>(X-Request-ID & Latency)"]
         RateLimiter["SlowAPI Rate Limiter<br/>(120/min global, 20/min chat)"]
         AuthRouter["/auth Router<br/>(JWT HS256, Bcrypt 72B)"]
-        DocRouter["/documents Router<br/>(Upload, RBAC Listing, Deletion, Chunks)"]
+        DocRouter["/documents Router<br/>(Upload, RBAC List, Chunks, Delete)"]
         ChatRouter["/chat Router<br/>(Sync & SSE Token Streaming)"]
     end
 
+    %% ── 3. Semantic Cache Tier ──
     subgraph CacheTier ["3. Sub-10ms Semantic Response Cache"]
-        SemCache[("Semantic Vector Cache<br/>(Cosine Sim >= 0.96 | Disk JSON / Memory)")]
+        SemCache[("Semantic Vector Cache<br/>(Cosine Sim 0.96+ & Disk JSON)")]
     end
 
-    subgraph RAGCore ["4. Hybrid Ingestion & Retrieval Engine"]
+    %% ── 4. Hybrid Ingestion & Retrieval Engine ──
+    subgraph RAGCore ["4. Hybrid RAG & Ingestion Engine"]
         Ingestion["DocumentIngestionService<br/>(PyPDF, Splitters, all-MiniLM-L6-v2)"]
-        DenseStore[("Chroma Vector Store<br/>(Cosine Semantic Search)")]
+        DenseStore[("Chroma Vector Store<br/>(384-d Cosine Semantic Search)")]
         SparseStore[("Okapi BM25 Index<br/>(Sparse Lexical Search)")]
         RRF["Reciprocal Rank Fusion<br/>(k=60 | Dense: 0.6, Sparse: 0.4)"]
         Recontext["Dialogue Recontextualizer<br/>(Multi-turn Memory Synthesis)"]
     end
 
+    %% ── 5. Two-Stage Reranker Tier ──
     subgraph RerankTier ["5. Two-Stage Cross-Encoder Reranker"]
         CrossEncoder["CrossEncoder Model<br/>(cross-encoder/ms-marco-MiniLM-L-6-v2)"]
     end
 
-    subgraph LLMTier ["6. LLM Generation & Citations"]
+    %% ── 6. LLM Generation Tier ──
+    subgraph LLMTier ["6. LLM Generation & SSE Streaming"]
         OpenAIProvider["OpenAI Engine<br/>(gpt-4o-mini / gpt-4o)"]
         GeminiProvider["Google Gemini Engine<br/>(gemini-1.5-flash)"]
         SSEGen["SSE Event Streamer<br/>(Sources, Tokens, Done)"]
     end
 
+    %% ── 7. Evaluation Tier ──
     subgraph EvalTier ["7. Evaluation & Quality Assurance"]
         Ragas["Ragas 0.2.x Pipeline<br/>(Faithfulness, Relevancy, Precision, Recall)"]
         GoldenDS[("Golden QA Dataset<br/>(20 Curated Ground Truths)")]
     end
 
-    ClientTier -->|HTTP / REST & SSE| APITier
-    APITier --> SemCache
-    SemCache -->|Cache Hit (sub-10ms)| ClientTier
-    SemCache -->|Cache Miss| Recontext
-    APITier --> Ingestion
+    %% ── Inter-layer Connections ──
+    ReactApp --> CORS
+    StreamlitApp --> CORS
+    CORS --> Logging
+    Logging --> RateLimiter
+    RateLimiter --> AuthRouter
+    RateLimiter --> DocRouter
+    RateLimiter --> ChatRouter
+
+    DocRouter --> Ingestion
     Ingestion --> DenseStore
     Ingestion --> SparseStore
+
+    ChatRouter --> SemCache
+    SemCache -.->|Cache Miss| Recontext
     Recontext --> DenseStore
     Recontext --> SparseStore
+
     DenseStore --> RRF
     SparseStore --> RRF
     RRF --> CrossEncoder
-    CrossEncoder --> LLMTier
-    LLMTier -->|Store Answer| SemCache
-    LLMTier -->|SSE Stream| ClientTier
+
+    CrossEncoder --> OpenAIProvider
+    CrossEncoder --> GeminiProvider
+    OpenAIProvider --> SSEGen
+    GeminiProvider --> SSEGen
+    SSEGen --> ReactApp
+    SSEGen --> StreamlitApp
+    SSEGen -.->|Store Query & Answer| SemCache
+
     GoldenDS --> Ragas
     Ragas --> APITier
 ```
@@ -133,7 +162,41 @@ graph TD
 
 ## 3. End-to-End Request Lifecycles
 
-### Chat & Real-Time SSE Retrieval Lifecycle (with Reranker & Cache)
+### A. Document Ingestion Lifecycle
+> [!TIP]
+> Open standalone [ingestion_sequence.mmd](file:///C:/Users/Faizan%20J/securerag/docs/ingestion_sequence.mmd) to view with interactive controls.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Client as User / Admin
+    participant API as POST /documents/upload
+    participant Ingest as DocumentIngestionService
+    participant Splitter as RecursiveCharacterTextSplitter
+    participant Embed as SentenceTransformers (all-MiniLM-L6-v2)
+    participant Chroma as Chroma Vector DB (Dense)
+    participant BM25 as Okapi BM25 Index (Sparse)
+    participant Registry as DocumentRegistry
+
+    Client->>API: Upload Document (PDF / TXT / MD)
+    API->>API: Validate file type & size
+    API->>Ingest: Ingest file with owner metadata
+    Ingest->>Splitter: Split text (chunk_size=900, overlap=150)
+    Splitter-->>Ingest: Text chunks with page numbers
+    Ingest->>Embed: Generate 384-d normalized embeddings
+    Embed-->>Ingest: Vector representations
+    Ingest->>Chroma: Store chunks, vectors & RBAC metadata
+    Ingest->>BM25: Tokenize & update sparse index stats
+    Ingest->>Registry: Register document record
+    Ingest-->>API: IngestionResult (chunks count, doc_id)
+    API-->>Client: 201 Created (UploadResponse)
+```
+
+---
+
+### B. Chat & Real-Time SSE Retrieval Lifecycle (with Reranker & Cache)
+> [!TIP]
+> Open standalone [chat_stream_sequence.mmd](file:///C:/Users/Faizan%20J/securerag/docs/chat_stream_sequence.mmd) to view with interactive controls.
 
 ```mermaid
 sequenceDiagram
@@ -147,23 +210,23 @@ sequenceDiagram
     participant LLM as OpenAI / Gemini
 
     Client->>ChatAPI: POST /chat/stream (question, session_id)
-    ChatAPI->>Cache: Lookup semantic embedding (sim >= 0.96)
+    ChatAPI->>Cache: Lookup query embedding (cosine sim >= 0.96)
     alt Semantic Cache Hit
-        Cache-->>ChatAPI: Cached Answer + Grounded Sources
-        ChatAPI-->>Client: event: sources
+        Cache-->>ChatAPI: Return cached answer & sources (<10ms)
+        ChatAPI-->>Client: event: sources (Citation metadata)
         ChatAPI-->>Client: event: token (Full cached answer)
         ChatAPI-->>Client: event: done (cached: true)
     else Semantic Cache Miss
-        ChatAPI->>Memory: Get dialogue history
-        Memory-->>ChatAPI: Prior turns
+        ChatAPI->>Memory: Retrieve conversation turns
+        Memory-->>ChatAPI: Prior dialogue context
         ChatAPI->>Retriever: Retrieve candidates (Dense + BM25 RRF, k=12)
         Retriever-->>ChatAPI: 12 Candidate Chunks
-        ChatAPI->>Reranker: Cross-Encoder score query-passage pairs
+        ChatAPI->>Reranker: Score query-passage cross-attention
         Reranker-->>ChatAPI: Top-4 Reranked Chunks
-        ChatAPI-->>Client: event: sources (Citation metadata & excerpts)
+        ChatAPI-->>Client: event: sources (Grounded citation metadata)
         ChatAPI->>LLM: Prompt LLM with reranked context
         loop Token Streaming
-            LLM-->>ChatAPI: Next token
+            LLM-->>ChatAPI: Next generated token
             ChatAPI-->>Client: event: token (text snippet)
         end
         ChatAPI->>Cache: Store (query, embedding, answer, sources)
