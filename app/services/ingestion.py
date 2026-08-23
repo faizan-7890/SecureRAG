@@ -46,11 +46,7 @@ class IngestionResult:
 
 
 class DocumentRegistry:
-    """In-memory registry of ingested documents.
-
-    Populated at ingest time and queried by the listing and deletion endpoints.
-    Follows the same module-level singleton pattern as UserStore and SessionStore.
-    """
+    """Registry of ingested documents with SQLAlchemy persistence and in-memory caching."""
 
     _records: dict[str, "DocumentRecord"] = {}
 
@@ -58,7 +54,7 @@ class DocumentRegistry:
     def add(cls, result: "IngestionResult") -> None:
         from app.models.schemas import DocumentRecord
 
-        cls._records[result.document_id] = DocumentRecord(
+        record = DocumentRecord(
             document_id=result.document_id,
             filename=result.filename,
             chunks=result.chunks,
@@ -68,12 +64,71 @@ class DocumentRegistry:
             source_sha256=result.source_sha256,
             source_size_bytes=result.source_size_bytes,
         )
+        cls._records[result.document_id] = record
+
+        try:
+            from datetime import datetime, timezone
+            from sqlalchemy import select
+            from app.core.db import db_session
+            from app.models.db_models import DocumentDB
+
+            with db_session() as session:
+                existing = session.scalar(select(DocumentDB).where(DocumentDB.document_id == result.document_id))
+                dt = datetime.fromisoformat(result.uploaded_at) if result.uploaded_at else datetime.now(timezone.utc)
+                if existing:
+                    existing.filename = result.filename
+                    existing.chunks_count = result.chunks
+                    existing.uploaded_at = dt
+                    existing.owner_id = result.owner_id
+                    existing.file_extension = result.file_extension
+                    existing.source_sha256 = result.source_sha256
+                    existing.source_size_bytes = result.source_size_bytes
+                else:
+                    doc_db = DocumentDB(
+                        document_id=result.document_id,
+                        filename=result.filename,
+                        chunks_count=result.chunks,
+                        uploaded_at=dt,
+                        owner_id=result.owner_id,
+                        file_extension=result.file_extension,
+                        source_sha256=result.source_sha256,
+                        source_size_bytes=result.source_size_bytes,
+                    )
+                    session.add(doc_db)
+        except Exception:
+            pass
 
     @classmethod
     def get(cls, document_id: str) -> "DocumentRecord | None":
-        from app.models.schemas import DocumentRecord  # noqa: F401
+        from app.models.schemas import DocumentRecord
 
-        return cls._records.get(document_id)
+        if document_id in cls._records:
+            return cls._records[document_id]
+
+        try:
+            from sqlalchemy import select
+            from app.core.db import db_session
+            from app.models.db_models import DocumentDB
+
+            with db_session() as session:
+                doc_db = session.scalar(select(DocumentDB).where(DocumentDB.document_id == document_id))
+                if doc_db:
+                    rec = DocumentRecord(
+                        document_id=doc_db.document_id,
+                        filename=doc_db.filename,
+                        chunks=doc_db.chunks_count,
+                        uploaded_at=doc_db.uploaded_at.isoformat() if hasattr(doc_db.uploaded_at, "isoformat") else str(doc_db.uploaded_at),
+                        owner_id=doc_db.owner_id,
+                        file_extension=doc_db.file_extension,
+                        source_sha256=doc_db.source_sha256,
+                        source_size_bytes=doc_db.source_size_bytes,
+                    )
+                    cls._records[document_id] = rec
+                    return rec
+        except Exception:
+            pass
+
+        return None
 
     @classmethod
     def all(
@@ -82,12 +137,32 @@ class DocumentRegistry:
         role: str | None = None,
         auth_enabled: bool = False,
     ) -> list["DocumentRecord"]:
-        """Return all records visible to the given caller.
+        """Return all records visible to the given caller."""
+        from app.models.schemas import DocumentRecord
 
-        - If role is 'admin' or auth is disabled: all documents are visible.
-        - If authenticated regular user: user's own documents and 'legacy' documents are visible.
-        - If unauthenticated and auth is enabled: only 'legacy' documents are visible.
-        """
+        try:
+            from sqlalchemy import select
+            from app.core.db import db_session
+            from app.models.db_models import DocumentDB
+
+            with db_session() as session:
+                docs_db = session.scalars(select(DocumentDB)).all()
+                if docs_db:
+                    for doc_db in docs_db:
+                        if doc_db.document_id not in cls._records:
+                            cls._records[doc_db.document_id] = DocumentRecord(
+                                document_id=doc_db.document_id,
+                                filename=doc_db.filename,
+                                chunks=doc_db.chunks_count,
+                                uploaded_at=doc_db.uploaded_at.isoformat() if hasattr(doc_db.uploaded_at, "isoformat") else str(doc_db.uploaded_at),
+                                owner_id=doc_db.owner_id,
+                                file_extension=doc_db.file_extension,
+                                source_sha256=doc_db.source_sha256,
+                                source_size_bytes=doc_db.source_size_bytes,
+                            )
+        except Exception:
+            pass
+
         records = list(cls._records.values())
         if role == "admin" or (not auth_enabled and owner_id is None):
             return records
@@ -97,8 +172,22 @@ class DocumentRegistry:
 
     @classmethod
     def remove(cls, document_id: str) -> bool:
-        """Remove a record from the registry. Returns True if it existed."""
-        return cls._records.pop(document_id, None) is not None
+        """Remove a record from the registry and database. Returns True if it existed."""
+        existed = cls._records.pop(document_id, None) is not None
+        try:
+            from sqlalchemy import select
+            from app.core.db import db_session
+            from app.models.db_models import DocumentDB
+
+            with db_session() as session:
+                doc_db = session.scalar(select(DocumentDB).where(DocumentDB.document_id == document_id))
+                if doc_db:
+                    session.delete(doc_db)
+                    existed = True
+        except Exception:
+            pass
+
+        return existed
 
 class DocumentIngestionService:
     def __init__(self, settings: Settings) -> None:
