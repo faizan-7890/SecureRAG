@@ -12,6 +12,7 @@ from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoin
 
 from app.api import auth, chat, documents
 from app.core.config import get_settings
+from app.core.db import init_db
 from app.core.logging import request_id_ctx, setup_logging
 
 
@@ -19,14 +20,21 @@ settings = get_settings()
 setup_logging(settings.log_level)
 logger = logging.getLogger(__name__)
 
+# Initialize database schema
+try:
+    init_db()
+except Exception as db_err:
+    logger.warning("Could not auto-initialize database on startup: %s", db_err)
+
 # ---------------------------------------------------------------------------
-# Rate limiter — in-memory, IP-keyed (use Redis backend for production)
+# Rate limiter — Redis backend when configured, in-memory fallback
 # ---------------------------------------------------------------------------
 
+storage_uri = settings.redis_url if settings.redis_url else "memory://"
 limiter = Limiter(
     key_func=get_remote_address,
     default_limits=[settings.rate_limit_global],
-    storage_uri="memory://",
+    storage_uri=storage_uri,
 )
 
 app = FastAPI(
