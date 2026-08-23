@@ -11,4 +11,6 @@ eval/results/*.json
 scratch/
 frontend/node_modules/
 frontend/dist/
+*.db
+data/*.db
 
