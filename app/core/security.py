@@ -28,26 +28,99 @@ class UserStore:
 
     @classmethod
     def add(cls, username: str, password: str, role: str = "user") -> None:
+        hashed = _hash_password(password)
         cls.users[username] = {
             "username": username,
-            "password": _hash_password(password),
+            "password": hashed,
             "role": role,
         }
+        try:
+            from sqlalchemy import select
+            from app.core.db import db_session
+            from app.models.db_models import UserDB
+
+            with db_session() as session:
+                existing = session.scalar(select(UserDB).where(UserDB.username == username))
+                if existing:
+                    existing.hashed_password = hashed
+                    existing.role = role
+                else:
+                    user_db = UserDB(username=username, hashed_password=hashed, role=role)
+                    session.add(user_db)
+        except Exception:
+            # Fallback for environments before db init
+            pass
 
     @classmethod
     def get(cls, username: str | None) -> dict[str, str] | None:
-        return cls.users.get(username) if username else None
+        if not username:
+            return None
+        if username in cls.users:
+            return cls.users[username]
+
+        try:
+            from sqlalchemy import select
+            from app.core.db import db_session
+            from app.models.db_models import UserDB
+
+            with db_session() as session:
+                user_db = session.scalar(select(UserDB).where(UserDB.username == username))
+                if user_db:
+                    user_dict = {
+                        "username": user_db.username,
+                        "password": user_db.hashed_password,
+                        "role": user_db.role,
+                    }
+                    cls.users[username] = user_dict
+                    return user_dict
+        except Exception:
+            pass
+
+        return None
 
     @classmethod
     def all(cls) -> list[dict[str, str]]:
+        try:
+            from sqlalchemy import select
+            from app.core.db import db_session
+            from app.models.db_models import UserDB
+
+            with db_session() as session:
+                users_db = session.scalars(select(UserDB)).all()
+                if users_db:
+                    result: list[dict[str, str]] = []
+                    for u in users_db:
+                        ud = {"username": u.username, "password": u.hashed_password, "role": u.role}
+                        cls.users[u.username] = ud
+                        result.append(ud)
+                    return result
+        except Exception:
+            pass
+
         return list(cls.users.values())
 
     @classmethod
     def update_role(cls, username: str, role: str) -> bool:
-        if username in cls.users:
+        cls.users.setdefault(username, {})
+        if username in cls.users and "username" in cls.users[username]:
             cls.users[username]["role"] = role
-            return True
-        return False
+
+        try:
+            from sqlalchemy import select
+            from app.core.db import db_session
+            from app.models.db_models import UserDB
+
+            with db_session() as session:
+                user_db = session.scalar(select(UserDB).where(UserDB.username == username))
+                if user_db:
+                    user_db.role = role
+                    if username in cls.users:
+                        cls.users[username]["role"] = role
+                    return True
+        except Exception:
+            pass
+
+        return username in cls.users and "username" in cls.users[username]
 
 
 def authenticate(username: str, password: str, settings: Settings):
