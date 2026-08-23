@@ -25,6 +25,7 @@
 | 10 | React 19 Bun SPA Frontend | Modern React + TypeScript + Tailwind web application powered by Bun | M6 | EXTENSION |
 | 11 | Two-Stage Cross-Encoder Reranker | Deep cross-attention scoring on hybrid candidates (ms-marco-MiniLM-L-6-v2) | M7 | EXTENSION |
 | 12 | Sub-10ms Semantic Vector Cache | In-memory & disk cached responses on high semantic similarity (>=0.96) | M7 | EXTENSION |
+| 13 | Production Persistence Layer | PostgreSQL 16 & SQLAlchemy 2.0 models, Alembic migrations, Redis TTL session memory | M8 | EXTENSION |
 
 ## Milestones
 | # | Name | Scope | Dependencies | Status |
@@ -36,6 +37,7 @@
 | 5 | Streamlit Management Console | Multi-tab UI with chunk viewer & admin panel | M4 | DONE |
 | 6 | Bun React Web Application | React 19 + TypeScript + Tailwind SPA with live SSE streaming | M5 | DONE |
 | 7 | Reranker & Semantic Cache | Cross-Encoder reranking & sub-10ms semantic vector cache | M6 | DONE |
+| 8 | PostgreSQL & Redis Persistence | SQLAlchemy 2.0 models, Alembic migrations, Redis memory with TTL | M7 | DONE |
 
 ## Interface Contracts
 - Ingestion -> VectorStore: Ingested chunks -> embeddings -> Chroma collection with metadata (user_id, role, doc_id)

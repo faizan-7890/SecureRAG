@@ -1,4 +1,4 @@
-# 🔒 SecureRAG — Enterprise Architecture & System Blueprint (v2)
+# 🔒 SecureRAG — Enterprise Architecture & System Blueprint (v3)
 
 ![SecureRAG Architecture Diagram](docs/assets/architecture_diagram.png)
 
@@ -6,10 +6,10 @@
 
 ## 1. System Topology Overview
 
-SecureRAG is an enterprise-grade Retrieval-Augmented Generation (RAG) system engineered with Role-Based Access Control (RBAC), multi-provider LLM support, hybrid search fusion, two-stage Cross-Encoder reranking, and sub-10ms semantic vector caching.
+SecureRAG is an enterprise-grade Retrieval-Augmented Generation (RAG) system engineered with Role-Based Access Control (RBAC), multi-provider LLM support, hybrid search fusion, two-stage Cross-Encoder reranking, sub-10ms semantic vector caching, and production database persistence (PostgreSQL 16, SQLAlchemy 2.0, Alembic, Redis).
 
 > [!TIP]
-> **Interactive Mermaid Canvas**: You can also open the standalone [architecture_topology.mmd](file:///C:/Users/Faizan%20J/securerag/docs/architecture_topology.mmd) file directly in the Antigravity IDE using your Mermaid extension to zoom, pan, and export.
+> **Interactive Mermaid Canvas**: Open [architecture_topology.mmd](file:///C:/Users/Faizan%20J/securerag/docs/architecture_topology.mmd) directly in Antigravity IDE using your Mermaid extension to zoom, pan, and inspect layers.
 
 ```mermaid
 flowchart TD
@@ -23,19 +23,26 @@ flowchart TD
     subgraph APITier ["2. API Gateway & Security Tier (FastAPI)"]
         CORS["CORS Middleware"]
         Logging["RequestLoggingMiddleware<br/>(X-Request-ID & Latency)"]
-        RateLimiter["SlowAPI Rate Limiter<br/>(120/min global, 20/min chat)"]
+        RateLimiter["SlowAPI Rate Limiter<br/>(Redis & In-Memory Fallback)"]
         AuthRouter["/auth Router<br/>(JWT HS256, Bcrypt 72B)"]
         DocRouter["/documents Router<br/>(Upload, RBAC List, Chunks, Delete)"]
         ChatRouter["/chat Router<br/>(Sync & SSE Token Streaming)"]
     end
 
-    %% ── 3. Semantic Cache Tier ──
-    subgraph CacheTier ["3. Sub-10ms Semantic Response Cache"]
+    %% ── 3. Persistence Tier ──
+    subgraph PersistenceTier ["3. Production Persistence Layer"]
+        PostgresDB[("PostgreSQL 16 / SQLite<br/>(SQLAlchemy 2.0 Models)")]
+        AlembicMgr["Alembic Migrations<br/>(Schema Version Control)"]
+        RedisStore[("Redis Session Memory<br/>(Multi-turn History TTL: 3600s)")]
+    end
+
+    %% ── 4. Semantic Cache Tier ──
+    subgraph CacheTier ["4. Sub-10ms Semantic Response Cache"]
         SemCache[("Semantic Vector Cache<br/>(Cosine Sim 0.96+ & Disk JSON)")]
     end
 
-    %% ── 4. Hybrid Ingestion & Retrieval Engine ──
-    subgraph RAGCore ["4. Hybrid RAG & Ingestion Engine"]
+    %% ── 5. Hybrid Ingestion & Retrieval Engine ──
+    subgraph RAGCore ["5. Hybrid Ingestion & Retrieval Engine"]
         Ingestion["DocumentIngestionService<br/>(PyPDF, Splitters, all-MiniLM-L6-v2)"]
         DenseStore[("Chroma Vector Store<br/>(384-d Cosine Semantic Search)")]
         SparseStore[("Okapi BM25 Index<br/>(Sparse Lexical Search)")]
@@ -43,20 +50,20 @@ flowchart TD
         Recontext["Dialogue Recontextualizer<br/>(Multi-turn Memory Synthesis)"]
     end
 
-    %% ── 5. Two-Stage Reranker Tier ──
-    subgraph RerankTier ["5. Two-Stage Cross-Encoder Reranker"]
+    %% ── 6. Two-Stage Reranker Tier ──
+    subgraph RerankTier ["6. Two-Stage Cross-Encoder Reranker"]
         CrossEncoder["CrossEncoder Model<br/>(cross-encoder/ms-marco-MiniLM-L-6-v2)"]
     end
 
-    %% ── 6. LLM Generation Tier ──
-    subgraph LLMTier ["6. LLM Generation & SSE Streaming"]
+    %% ── 7. LLM Generation Tier ──
+    subgraph LLMTier ["7. LLM Generation & SSE Streaming"]
         OpenAIProvider["OpenAI Engine<br/>(gpt-4o-mini / gpt-4o)"]
         GeminiProvider["Google Gemini Engine<br/>(gemini-1.5-flash)"]
         SSEGen["SSE Event Streamer<br/>(Sources, Tokens, Done)"]
     end
 
-    %% ── 7. Evaluation Tier ──
-    subgraph EvalTier ["7. Evaluation & Quality Assurance"]
+    %% ── 8. Evaluation Tier ──
+    subgraph EvalTier ["8. Evaluation & Quality Assurance"]
         Ragas["Ragas 0.2.x Pipeline<br/>(Faithfulness, Relevancy, Precision, Recall)"]
         GoldenDS[("Golden QA Dataset<br/>(20 Curated Ground Truths)")]
     end
@@ -70,11 +77,16 @@ flowchart TD
     RateLimiter --> DocRouter
     RateLimiter --> ChatRouter
 
+    AuthRouter --> PostgresDB
+    DocRouter --> PostgresDB
+    AlembicMgr --> PostgresDB
+
     DocRouter --> Ingestion
     Ingestion --> DenseStore
     Ingestion --> SparseStore
 
     ChatRouter --> SemCache
+    ChatRouter <--> RedisStore
     SemCache -.->|Cache Miss| Recontext
     Recontext --> DenseStore
     Recontext --> SparseStore
@@ -108,7 +120,7 @@ flowchart TD
 ### 🛡️ Layer 2: API Gateway & Security Tier (FastAPI)
 - **CORS Middleware**: Allows cross-origin REST and SSE streaming requests from client applications.
 - **RequestLoggingMiddleware**: Generates unique `X-Request-ID` correlation identifiers, tracks execution durations (in milliseconds), and writes structured JSON logs.
-- **SlowAPI Rate Limiter**: Enforces strict throttling limits (`120/minute` global, `20/minute` chat) to prevent abuse and denial-of-service.
+- **SlowAPI Rate Limiter**: Enforces strict throttling limits (`120/minute` global, `20/minute` chat) backed by Redis in production with in-memory fallback.
 - **Cryptographic Security Layer**:
   - Bcrypt password hashing (72-byte safe truncation).
   - Cryptographic HS256 JWT access tokens with 60-minute expiry.
@@ -116,14 +128,24 @@ flowchart TD
 
 ---
 
-### ⚡ Layer 3: Sub-10ms Semantic Response Cache
+### 🗄️ Layer 3: Production Persistence Tier
+- **PostgreSQL 16 & SQLAlchemy 2.0**:
+  - `UserDB` (`users` table): UUID primary key, indexed unique usernames, bcrypt password hashes, RBAC roles (`admin`, `user`, `manager`), and audit timestamps.
+  - `DocumentDB` (`documents` table): UUID primary key, filename, chunks count, upload timestamps, owner ID index, SHA-256 hash, and file size.
+  - **Zero-Config Fallback**: Automatic seamless fallback to SQLite (`sqlite:///./data/securerag.db`) for lightweight local development and test isolation.
+- **Alembic Database Migrations**: Tracks and executes versioned schema migrations (`alembic/versions/`).
+- **Redis Multi-Turn Session Memory**: Stores conversational message turns with automated TTL expiration (`session_ttl_seconds = 3600`).
+
+---
+
+### ⚡ Layer 4: Sub-10ms Semantic Response Cache
 - **Embedding Lookup**: Incoming standalone questions are vectorized via `sentence-transformers/all-MiniLM-L6-v2`.
 - **Similarity Threshold**: If cosine similarity with any stored cache vector $\ge 0.96$, the cached answer and citation metadata are served instantly with zero LLM inference cost and $<10\text{ms}$ latency.
 - **Persistence & TTL**: Caches are persisted to disk in `data/cache/semantic_cache.json` with automated TTL expiry.
 
 ---
 
-### ⚙️ Layer 4: Hybrid Ingestion & Retrieval Engine
+### ⚙️ Layer 5: Hybrid Ingestion & Retrieval Engine
 - **Document Ingestion**:
   - Accepts PDF, TXT, and Markdown files.
   - Page-aware extraction via `pypdf.PdfReader` preserving 1-based page coordinates.
@@ -136,21 +158,21 @@ flowchart TD
 
 ---
 
-### 🎯 Layer 5: Two-Stage Cross-Encoder Reranker
+### 🎯 Layer 6: Two-Stage Cross-Encoder Reranker
 - **Deep Cross-Attention**: Reranks top 12–15 hybrid candidate chunks using `cross-encoder/ms-marco-MiniLM-L-6-v2`.
 - **Query-Passage Joint Scoring**: Jointly evaluates full token interactions between the user's question and passage content to compute calibrated sigmoid relevance probabilities.
 - **Top-K Selection**: Selects the top 3–4 most relevant passages for LLM prompt context injection.
 
 ---
 
-### 🧠 Layer 6: LLM Generation & Token Streaming
+### 🧠 Layer 7: LLM Generation & Token Streaming
 - **Conversational Memory**: `SessionStore` tracks prior dialogue turns and feeds the Query Recontextualizer.
 - **Multi-Provider Support**: Seamless dynamic resolution between OpenAI (`gpt-4o-mini`) and Google Gemini (`gemini-1.5-flash`).
 - **SSE Stream Protocol**: Emits formatted Server-Sent Events (`event: sources`, `event: token`, `event: done`, `event: error`).
 
 ---
 
-### 📊 Layer 7: Evaluation & Quality Assurance
+### 📊 Layer 8: Evaluation & Quality Assurance
 - **Ragas 0.2.x Metric Pipeline**: Evaluates retrieval and generation fidelity across 5 standard dimensions:
   1. **Faithfulness** (1.00): 100% grounded, zero hallucinations.
   2. **Answer Relevancy** (0.96): High semantic directness to the user's question.
@@ -176,7 +198,7 @@ sequenceDiagram
     participant Embed as SentenceTransformers (all-MiniLM-L6-v2)
     participant Chroma as Chroma Vector DB (Dense)
     participant BM25 as Okapi BM25 Index (Sparse)
-    participant Registry as DocumentRegistry
+    participant DB as PostgreSQL / SQLite (DocumentDB)
 
     Client->>API: Upload Document (PDF / TXT / MD)
     API->>API: Validate file type & size
@@ -187,14 +209,14 @@ sequenceDiagram
     Embed-->>Ingest: Vector representations
     Ingest->>Chroma: Store chunks, vectors & RBAC metadata
     Ingest->>BM25: Tokenize & update sparse index stats
-    Ingest->>Registry: Register document record
+    Ingest->>DB: Persist DocumentDB entity record
     Ingest-->>API: IngestionResult (chunks count, doc_id)
     API-->>Client: 201 Created (UploadResponse)
 ```
 
 ---
 
-### B. Chat & Real-Time SSE Retrieval Lifecycle (with Reranker & Cache)
+### B. Chat & Real-Time SSE Retrieval Lifecycle (with Reranker, Cache & Redis)
 > [!TIP]
 > Open standalone [chat_stream_sequence.mmd](file:///C:/Users/Faizan%20J/securerag/docs/chat_stream_sequence.mmd) to view with interactive controls.
 
@@ -204,7 +226,7 @@ sequenceDiagram
     actor Client as React Client (Bun) / Streamlit
     participant ChatAPI as POST /chat/stream
     participant Cache as Semantic Cache
-    participant Memory as SessionStore
+    participant Redis as Redis Session Memory
     participant Retriever as Hybrid Retriever
     participant Reranker as Cross-Encoder Reranker
     participant LLM as OpenAI / Gemini
@@ -217,8 +239,8 @@ sequenceDiagram
         ChatAPI-->>Client: event: token (Full cached answer)
         ChatAPI-->>Client: event: done (cached: true)
     else Semantic Cache Miss
-        ChatAPI->>Memory: Retrieve conversation turns
-        Memory-->>ChatAPI: Prior dialogue context
+        ChatAPI->>Redis: Retrieve conversation turns (TTL refreshed)
+        Redis-->>ChatAPI: Prior dialogue context
         ChatAPI->>Retriever: Retrieve candidates (Dense + BM25 RRF, k=12)
         Retriever-->>ChatAPI: 12 Candidate Chunks
         ChatAPI->>Reranker: Score query-passage cross-attention
@@ -230,7 +252,7 @@ sequenceDiagram
             ChatAPI-->>Client: event: token (text snippet)
         end
         ChatAPI->>Cache: Store (query, embedding, answer, sources)
-        ChatAPI->>Memory: Save turn to SessionStore
+        ChatAPI->>Redis: Save turn with TTL expiration (3600s)
         ChatAPI-->>Client: event: done (cached: false)
     end
 ```
