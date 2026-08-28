@@ -1,6 +1,6 @@
 <mxfile host="65bd71144e">
     <diagram id="securerag-architecture-diagram" name="SecureRAG Full System Architecture">
-        <mxGraphModel dx="2282" dy="604" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1500" pageHeight="1150" background="#0f172a" math="0" shadow="1">
+        <mxGraphModel dx="2448" dy="664" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1500" pageHeight="1150" background="#0f172a" math="0" shadow="1">
             <root>
                 <mxCell id="0"/>
                 <mxCell id="1" parent="0"/>
@@ -52,7 +52,7 @@
                 <mxCell id="text_splitter" value="&lt;div style=&quot;font-weight: 700; font-size: 12px; color: #93c5fd;&quot;&gt;✂️ Recursive Splitter&lt;/div&gt;&lt;div style=&quot;font-size: 10px; color: #cbd5e1;&quot;&gt;chunk_size: 900 chars&lt;br/&gt;chunk_overlap: 150 chars&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0f172a;strokeColor=#3b82f6;strokeWidth=1.5;align=center;verticalAlign=middle;arcSize=10;" parent="tier4_box" vertex="1">
                     <mxGeometry x="25" y="132" width="190" height="75" as="geometry"/>
                 </mxCell>
-                <mxCell id="2" style="edgeStyle=none;html=1;entryX=0.589;entryY=0.012;entryDx=0;entryDy=0;entryPerimeter=0;" edge="1" parent="tier4_box" source="embed_model" target="chroma_dense">
+                <mxCell id="2" style="edgeStyle=none;html=1;entryX=0.589;entryY=0.012;entryDx=0;entryDy=0;entryPerimeter=0;" parent="tier4_box" source="embed_model" target="chroma_dense" edge="1">
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
                 <mxCell id="embed_model" value="&lt;div style=&quot;font-weight: 700; font-size: 12px; color: #38bdf8;&quot;&gt;🧠 Vector Embedding&lt;/div&gt;&lt;div style=&quot;font-size: 10px; color: #cbd5e1;&quot;&gt;all-MiniLM-L6-v2&lt;br/&gt;384-d Dense Embeddings&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#0f172a;strokeColor=#0284c7;strokeWidth=1.5;align=center;verticalAlign=middle;arcSize=10;" parent="tier4_box" vertex="1">
