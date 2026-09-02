@@ -122,6 +122,7 @@ export const App: React.FC = () => {
             api={api}
             sessionId={sessionId}
             onResetSession={handleResetSession}
+            onInspectDocument={handleInspectDocument}
           />
         )}
 
