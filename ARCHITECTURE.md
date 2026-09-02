@@ -1,21 +1,25 @@
-# 🔒 SecureRAG — Enterprise Architecture & System Blueprint (v3)
+# 🔒 SecureRAG — Enterprise Architecture & System Blueprint (v4)
 
-![SecureRAG Architecture Diagram](docs/assets/architecture_diagram.png)
+![SecureRAG Architecture Diagram](docs/assets/architecture_v4.png)
 
 ---
 
 ## 1. System Topology Overview
 
-SecureRAG is an enterprise-grade Retrieval-Augmented Generation (RAG) system engineered with Role-Based Access Control (RBAC), multi-provider LLM support, hybrid search fusion, two-stage Cross-Encoder reranking, sub-10ms semantic vector caching, and production database persistence (PostgreSQL 16, SQLAlchemy 2.0, Alembic, Redis).
+SecureRAG is an enterprise-grade Retrieval-Augmented Generation (RAG) system engineered with Role-Based Access Control (RBAC), multi-provider LLM support, hybrid search fusion, two-stage Cross-Encoder reranking, sub-10ms semantic vector caching, persistent relational storage (PostgreSQL 16, SQLAlchemy 2.0, Alembic, Redis), and an enhanced reactive workspace with multi-thread session management and interactive citation inspection.
 
 > [!TIP]
-> **Interactive Mermaid Canvas**: Open [architecture_topology.mmd](file:///C:/Users/Faizan%20J/securerag/docs/architecture_topology.mmd) directly in Antigravity IDE using your Mermaid extension to zoom, pan, and inspect layers.
+> **Interactive Architecture Artifact**: View the comprehensive generative UI blueprint artifact with sequence carousels at [securerag_v4_architecture.md](file:///C:/Users/Faizan%20J/.gemini/antigravity-cli/brain/6827c641-3347-4b7a-b8ca-c00f4bc10804/securerag_v4_architecture.md).
 
 ```mermaid
 flowchart TD
     %% ── 1. Client Tier ──
-    subgraph ClientTier ["1. Client Tier"]
-        ReactApp["React 19 + TypeScript SPA<br/>(Powered by Bun & Vite)"]
+    subgraph ClientTier ["1. Client & Generative UI Tier"]
+        ThreadSidebar["ThreadSidebar<br/>(Multi-Chat History & Export)"]
+        ChatWorkspace["ChatWorkspace<br/>(SSE Streaming, Feedback, Scope)"]
+        CitationDrawer["CitationDrawer<br/>(Keyword Glow & Relevance Gauge)"]
+        DocManager["DocumentManager<br/>(Uploads & RBAC Registry)"]
+        ChunkInspector["ChunkInspector<br/>(Chroma Vector Inspector)"]
         StreamlitApp["Streamlit Python UI<br/>(Admin & Management Console)"]
     end
 
