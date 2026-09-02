@@ -13,6 +13,16 @@ export interface ChatMessage {
   sources?: Source[];
   timestamp: string;
   cached?: boolean;
+  feedback?: 'up' | 'down' | null;
+}
+
+export interface ChatThread {
+  id: string;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+  messages: ChatMessage[];
+  scopeDocument?: string | null;
 }
 
 export interface DocumentRecord {
