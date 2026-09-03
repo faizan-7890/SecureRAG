@@ -85,6 +85,8 @@ class ChatRequest(BaseModel):
     query_expansion: bool | None = None
     enable_reranker: bool | None = None
     enable_semantic_cache: bool | None = None
+    enable_prompt_injection_detection: bool | None = None
+    enable_pii_redaction: bool | None = None
 
 
 class Source(BaseModel):
@@ -100,6 +102,8 @@ class ChatResponse(BaseModel):
     sources: list[Source]
     session_id: str | None = None
     cached: bool = False
+    prompt_injection_detected: bool = False
+    pii_redacted: bool = False
 
 
 class StreamSourceEvent(BaseModel):

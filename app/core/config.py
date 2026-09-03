@@ -67,6 +67,9 @@ class Settings(BaseSettings):
     session_ttl_seconds: int = Field(default=3600, ge=60)
     rate_limit_global: str = "120/minute"
     rate_limit_chat: str = "20/minute"
+    enable_prompt_injection_detection: bool = True
+    enable_pii_redaction: bool = True
+    pii_redact_on_ingestion: bool = False
 
 
 @lru_cache
