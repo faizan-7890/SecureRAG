@@ -198,6 +198,8 @@ export class ApiClient {
       query_expansion: this.settings.queryExpansion,
       enable_reranker: this.settings.enableReranker,
       enable_semantic_cache: this.settings.enableSemanticCache,
+      enable_prompt_injection_detection: this.settings.enablePromptInjectionDetection,
+      enable_pii_redaction: this.settings.enablePiiRedaction,
     };
 
     const url = this.getUrl('/chat/stream');

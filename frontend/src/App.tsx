@@ -35,6 +35,8 @@ export const App: React.FC = () => {
       queryExpansion: parsed.queryExpansion !== undefined ? parsed.queryExpansion : false,
       enableReranker: parsed.enableReranker !== undefined ? parsed.enableReranker : true,
       enableSemanticCache: parsed.enableSemanticCache !== undefined ? parsed.enableSemanticCache : true,
+      enablePromptInjectionDetection: parsed.enablePromptInjectionDetection !== undefined ? parsed.enablePromptInjectionDetection : true,
+      enablePiiRedaction: parsed.enablePiiRedaction !== undefined ? parsed.enablePiiRedaction : true,
     };
   });
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);

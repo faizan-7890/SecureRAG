@@ -95,4 +95,6 @@ export interface RuntimeSettings {
   queryExpansion: boolean;
   enableReranker: boolean;
   enableSemanticCache: boolean;
+  enablePromptInjectionDetection: boolean;
+  enablePiiRedaction: boolean;
 }

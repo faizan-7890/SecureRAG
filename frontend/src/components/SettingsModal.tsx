@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Settings as SettingsIcon, Sliders, Key, Server, Cpu } from 'lucide-react';
+import { X, Settings as SettingsIcon, Sliders, Key, Server, Cpu, ShieldAlert } from 'lucide-react';
 import type { RuntimeSettings } from '../types';
 
 interface SettingsModalProps {
@@ -136,6 +136,40 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 type="checkbox"
                 checked={settings.enableSemanticCache}
                 onChange={(e) => onUpdateSettings({ ...settings, enableSemanticCache: e.target.checked })}
+                className="h-4 w-4 rounded accent-indigo-600"
+              />
+            </div>
+          </div>
+
+          {/* Enterprise Security Guardrails */}
+          <div className="space-y-3 pt-2 border-t border-slate-800">
+            <div className="flex items-center gap-1.5 font-semibold text-slate-300">
+              <ShieldAlert className="h-3.5 w-3.5 text-emerald-400" />
+              <span>Enterprise Security Guardrails</span>
+            </div>
+
+            <div className="flex items-center justify-between p-3 rounded-xl bg-slate-950 border border-slate-850">
+              <div>
+                <div className="font-semibold text-slate-200">Prompt Injection & Jailbreak Defense</div>
+                <div className="text-[11px] text-slate-400">Neutralize directive overrides, prompt leak requests, and roleplay bypasses.</div>
+              </div>
+              <input
+                type="checkbox"
+                checked={settings.enablePromptInjectionDetection}
+                onChange={(e) => onUpdateSettings({ ...settings, enablePromptInjectionDetection: e.target.checked })}
+                className="h-4 w-4 rounded accent-indigo-600"
+              />
+            </div>
+
+            <div className="flex items-center justify-between p-3 rounded-xl bg-slate-950 border border-slate-850">
+              <div>
+                <div className="font-semibold text-slate-200">PII Anonymization & Redaction</div>
+                <div className="text-[11px] text-slate-400">Auto-scrub SSNs, credit cards (Luhn-checked), emails, phones, and API keys.</div>
+              </div>
+              <input
+                type="checkbox"
+                checked={settings.enablePiiRedaction}
+                onChange={(e) => onUpdateSettings({ ...settings, enablePiiRedaction: e.target.checked })}
                 className="h-4 w-4 rounded accent-indigo-600"
               />
             </div>
