@@ -240,6 +240,13 @@ class DocumentIngestionService:
         if not chunks:
             raise EmptyDocumentError("No text chunks could be created from this document.")
 
+        if getattr(self.settings, "pii_redact_on_ingestion", False):
+            from app.core.guardrails import SecurityGuardrails
+
+            guard = SecurityGuardrails(self.settings)
+            for chunk in chunks:
+                chunk.page_content, _ = guard.redact_pii(chunk.page_content)
+
         document_id = str(uuid4())
         uploaded_at = datetime.now(UTC).isoformat()
         source_sha256 = self._sha256(file_path)
