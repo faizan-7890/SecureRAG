@@ -26,6 +26,8 @@
 | 11 | Two-Stage Cross-Encoder Reranker | Deep cross-attention scoring on hybrid candidates (ms-marco-MiniLM-L-6-v2) | M7 | EXTENSION |
 | 12 | Sub-10ms Semantic Vector Cache | In-memory & disk cached responses on high semantic similarity (>=0.96) | M7 | EXTENSION |
 | 13 | Production Persistence Layer | PostgreSQL 16 & SQLAlchemy 2.0 models, Alembic migrations, Redis TTL session memory | M8 | EXTENSION |
+| 14 | Advanced Frontend UX Suite | Multi-chat ThreadSidebar, interactive CitationDrawer, feedback, document scoping | M9 | EXTENSION |
+| 15 | Enterprise Security Guardrails | Prompt injection & jailbreak defense, PII anonymization & Luhn card verification | M10 | EXTENSION |
 
 ## Milestones
 | # | Name | Scope | Dependencies | Status |
@@ -38,6 +40,8 @@
 | 6 | Bun React Web Application | React 19 + TypeScript + Tailwind SPA with live SSE streaming | M5 | DONE |
 | 7 | Reranker & Semantic Cache | Cross-Encoder reranking & sub-10ms semantic vector cache | M6 | DONE |
 | 8 | PostgreSQL & Redis Persistence | SQLAlchemy 2.0 models, Alembic migrations, Redis memory with TTL | M7 | DONE |
+| 9 | Advanced Frontend UX & Citations | Multi-chat sidebar, sliding citation inspector, document scoping | M8 | DONE |
+| 10 | Enterprise Security Guardrails | Prompt injection detection, PII masking, XML prompt hardening | M9 | DONE |
 
 ## Interface Contracts
 - Ingestion -> VectorStore: Ingested chunks -> embeddings -> Chroma collection with metadata (user_id, role, doc_id)
