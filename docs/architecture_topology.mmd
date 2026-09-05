@@ -1,7 +1,11 @@
 flowchart TD
-    %% ── 1. Client Tier ──
-    subgraph ClientTier ["1. Client Tier"]
-        ReactApp["React 19 + TypeScript SPA<br/>(Powered by Bun & Vite)"]
+    %% ── 1. Client & Generative UI Tier ──
+    subgraph ClientTier ["1. Client & Generative UI Tier"]
+        ThreadSidebar["ThreadSidebar<br/>(Multi-Chat History & Export)"]
+        ChatWorkspace["ChatWorkspace<br/>(SSE Streaming, Feedback, Scope)"]
+        CitationDrawer["CitationDrawer<br/>(Keyword Glow & Relevance Gauge)"]
+        DocManager["DocumentManager<br/>(Uploads & RBAC Registry)"]
+        ChunkInspector["ChunkInspector<br/>(Chroma Vector Inspector)"]
         StreamlitApp["Streamlit Python UI<br/>(Admin & Management Console)"]
     end
 
@@ -15,20 +19,27 @@ flowchart TD
         ChatRouter["/chat Router<br/>(Sync & SSE Token Streaming)"]
     end
 
-    %% ── 3. Persistence Tier ──
-    subgraph PersistenceTier ["3. Production Persistence Layer"]
+    %% ── 3. Enterprise Guardrails Tier ──
+    subgraph GuardrailsTier ["3. Enterprise Security Guardrails"]
+        InjectionDetector["PromptInjectionDetector<br/>(Jailbreak & Override Scanning)"]
+        PIIRedactor["PIIRedactor<br/>(SSN, Credit Card, Email, Phone, IP)"]
+        ContextSanitizer["ContextSanitizer<br/>(XML Prompt Hardening)"]
+    end
+
+    %% ── 4. Persistence Tier ──
+    subgraph PersistenceTier ["4. Production Persistence Layer"]
         PostgresDB[("PostgreSQL 16 / SQLite<br/>(SQLAlchemy 2.0 Models)")]
         AlembicMgr["Alembic Migrations<br/>(Schema Version Control)"]
         RedisStore[("Redis Session Memory<br/>(Multi-turn History TTL: 3600s)")]
     end
 
-    %% ── 4. Semantic Cache Tier ──
-    subgraph CacheTier ["4. Sub-10ms Semantic Response Cache"]
+    %% ── 5. Semantic Cache Tier ──
+    subgraph CacheTier ["5. Sub-10ms Semantic Response Cache"]
         SemCache[("Semantic Vector Cache<br/>(Cosine Sim 0.96+ & Disk JSON)")]
     end
 
-    %% ── 5. Hybrid Ingestion & Retrieval Engine ──
-    subgraph RAGCore ["5. Hybrid Ingestion & Retrieval Engine"]
+    %% ── 6. Hybrid Ingestion & Retrieval Engine ──
+    subgraph RAGCore ["6. Hybrid Ingestion & Retrieval Engine"]
         Ingestion["DocumentIngestionService<br/>(PyPDF, Splitters, all-MiniLM-L6-v2)"]
         DenseStore[("Chroma Vector Store<br/>(384-d Cosine Semantic Search)")]
         SparseStore[("Okapi BM25 Index<br/>(Sparse Lexical Search)")]
@@ -36,26 +47,27 @@ flowchart TD
         Recontext["Dialogue Recontextualizer<br/>(Multi-turn Memory Synthesis)"]
     end
 
-    %% ── 6. Two-Stage Reranker Tier ──
-    subgraph RerankTier ["6. Two-Stage Cross-Encoder Reranker"]
+    %% ── 7. Two-Stage Reranker Tier ──
+    subgraph RerankTier ["7. Two-Stage Cross-Encoder Reranker"]
         CrossEncoder["CrossEncoder Model<br/>(cross-encoder/ms-marco-MiniLM-L-6-v2)"]
     end
 
-    %% ── 7. LLM Generation Tier ──
-    subgraph LLMTier ["7. LLM Generation & SSE Streaming"]
+    %% ── 8. LLM Generation Tier ──
+    subgraph LLMTier ["8. LLM Generation & SSE Streaming"]
         OpenAIProvider["OpenAI Engine<br/>(gpt-4o-mini / gpt-4o)"]
         GeminiProvider["Google Gemini Engine<br/>(gemini-1.5-flash)"]
         SSEGen["SSE Event Streamer<br/>(Sources, Tokens, Done)"]
     end
 
-    %% ── 8. Evaluation Tier ──
-    subgraph EvalTier ["8. Evaluation & Quality Assurance"]
+    %% ── 9. Evaluation Tier ──
+    subgraph EvalTier ["9. Evaluation & Quality Assurance"]
         Ragas["Ragas 0.2.x Pipeline<br/>(Faithfulness, Relevancy, Precision, Recall)"]
         GoldenDS[("Golden QA Dataset<br/>(20 Curated Ground Truths)")]
     end
 
     %% ── Inter-layer Connections ──
-    ReactApp --> CORS
+    ChatWorkspace --> CORS
+    DocManager --> CORS
     StreamlitApp --> CORS
     CORS --> Logging
     Logging --> RateLimiter
@@ -68,10 +80,13 @@ flowchart TD
     AlembicMgr --> PostgresDB
 
     DocRouter --> Ingestion
-    Ingestion --> DenseStore
-    Ingestion --> SparseStore
+    Ingestion --> PIIRedactor
+    PIIRedactor --> DenseStore
+    PIIRedactor --> SparseStore
 
-    ChatRouter --> SemCache
+    ChatRouter --> InjectionDetector
+    InjectionDetector -.->|Blocked| ChatWorkspace
+    InjectionDetector -->|Safe| SemCache
     ChatRouter <--> RedisStore
     SemCache -.->|Cache Miss| Recontext
     Recontext --> DenseStore
@@ -81,13 +96,18 @@ flowchart TD
     SparseStore --> RRF
     RRF --> CrossEncoder
 
-    CrossEncoder --> OpenAIProvider
-    CrossEncoder --> GeminiProvider
+    CrossEncoder --> ContextSanitizer
+    ContextSanitizer --> OpenAIProvider
+    ContextSanitizer --> GeminiProvider
     OpenAIProvider --> SSEGen
     GeminiProvider --> SSEGen
-    SSEGen --> ReactApp
+    SSEGen --> ChatWorkspace
     SSEGen --> StreamlitApp
     SSEGen -.->|Store Query & Answer| SemCache
+
+    ChatWorkspace --> ThreadSidebar
+    ChatWorkspace --> CitationDrawer
+    DocManager --> ChunkInspector
 
     GoldenDS --> Ragas
     Ragas --> APITier
